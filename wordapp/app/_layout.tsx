@@ -18,7 +18,7 @@ export default function RootLayout() {
       background: Colors.light.background,
       card: '#FFFFFF',
       text: Colors.light.text,
-      border: 'rgba(58,143,138,0.18)',
+      border: 'rgba(217,119,43,0.18)',
       notification: Colors.light.tint,
     },
   };

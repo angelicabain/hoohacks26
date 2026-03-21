@@ -130,7 +130,7 @@ const createStyles = () =>
     fontSize: 22,
     color: '#2C241C',
     marginBottom: 4,
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.serif,
   },
   permText: {
     fontSize: 14,
@@ -141,7 +141,7 @@ const createStyles = () =>
   },
   permButton: {
     marginTop: 8,
-    backgroundColor: '#3A8F8A',
+    backgroundColor: '#D9772B',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 30,
@@ -151,7 +151,7 @@ const createStyles = () =>
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.2,
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.sans,
   },
   backLink: {
     marginTop: 4,
@@ -160,7 +160,7 @@ const createStyles = () =>
   backLinkText: {
     color: 'rgba(62,48,36,0.64)',
     fontSize: 14,
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.sans,
   },
 
   safeArea: {
@@ -184,7 +184,7 @@ const createStyles = () =>
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.24)',
+    borderColor: 'rgba(217,119,43,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -205,7 +205,7 @@ const createStyles = () =>
     fontSize: 24,
     color: '#2C241C',
     letterSpacing: 0.1,
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.serif,
   },
   // Reticle
   reticleWrapper: {
@@ -225,35 +225,35 @@ const createStyles = () =>
     left: 0,
     borderTopWidth: CORNER_THICKNESS,
     borderLeftWidth: CORNER_THICKNESS,
-    borderColor: '#3A8F8A',
+    borderColor: '#D9772B',
   },
   cornerTR: {
     top: 0,
     right: 0,
     borderTopWidth: CORNER_THICKNESS,
     borderRightWidth: CORNER_THICKNESS,
-    borderColor: '#3A8F8A',
+    borderColor: '#D9772B',
   },
   cornerBL: {
     bottom: 0,
     left: 0,
     borderBottomWidth: CORNER_THICKNESS,
     borderLeftWidth: CORNER_THICKNESS,
-    borderColor: '#3A8F8A',
+    borderColor: '#D9772B',
   },
   cornerBR: {
     bottom: 0,
     right: 0,
     borderBottomWidth: CORNER_THICKNESS,
     borderRightWidth: CORNER_THICKNESS,
-    borderColor: '#3A8F8A',
+    borderColor: '#D9772B',
   },
   crosshair: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(58,143,138,0.82)',
-    shadowColor: '#3A8F8A',
+    backgroundColor: 'rgba(217,119,43,0.84)',
+    shadowColor: '#D9772B',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 3,
@@ -268,7 +268,7 @@ const createStyles = () =>
   hintBox: {
     backgroundColor: 'rgba(255,255,255,0.88)',
     borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.2)',
+    borderColor: 'rgba(217,119,43,0.18)',
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -278,6 +278,6 @@ const createStyles = () =>
     fontSize: 12,
     letterSpacing: 0.2,
     textAlign: 'center',
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.sans,
   },
 });

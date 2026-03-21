@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fonts } from '@/constants/theme';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -26,6 +26,22 @@ export default function HomeScreen() {
   const ring1 = useRef(new Animated.Value(0.6)).current;
   const ring2 = useRef(new Animated.Value(0.4)).current;
   const ring3 = useRef(new Animated.Value(0.2)).current;
+  const bubbleX1 = useRef(new Animated.Value(width * 0.08)).current;
+  const bubbleY1 = useRef(new Animated.Value(height * 0.12)).current;
+  const bubbleX2 = useRef(new Animated.Value(width * 0.76)).current;
+  const bubbleY2 = useRef(new Animated.Value(height * 0.32)).current;
+  const bubbleX3 = useRef(new Animated.Value(width * 0.12)).current;
+  const bubbleY3 = useRef(new Animated.Value(height * 0.55)).current;
+  const bubbleX4 = useRef(new Animated.Value(width * 0.7)).current;
+  const bubbleY4 = useRef(new Animated.Value(height * 0.7)).current;
+  const bubbleX5 = useRef(new Animated.Value(width * 0.06)).current;
+  const bubbleY5 = useRef(new Animated.Value(height * 0.82)).current;
+  const bubbleX6 = useRef(new Animated.Value(width * 0.74)).current;
+  const bubbleY6 = useRef(new Animated.Value(height * 0.1)).current;
+  const bubbleX7 = useRef(new Animated.Value(width * 0.14)).current;
+  const bubbleY7 = useRef(new Animated.Value(height * 0.42)).current;
+  const bubbleX8 = useRef(new Animated.Value(width * 0.72)).current;
+  const bubbleY8 = useRef(new Animated.Value(height * 0.9)).current;
 
   useEffect(() => {
     // Entrance animation
@@ -103,6 +119,64 @@ export default function HomeScreen() {
     ringAnimation(ring1, 0);
     ringAnimation(ring2, 900);
     ringAnimation(ring3, 1800);
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    let cancelled = false;
+    const floatBubble = (
+      xAnim: Animated.Value,
+      yAnim: Animated.Value,
+      minDuration: number,
+      maxDuration: number,
+      delay = 0
+    ) => {
+      const step = (stepDelay: number) => {
+        if (cancelled) {
+          return;
+        }
+
+        const targetX = randomInRange(width * 0.04, width * 0.82);
+        const targetY = randomInRange(height * 0.05, height * 0.9);
+        const duration = randomInRange(minDuration, maxDuration);
+
+        Animated.sequence([
+          Animated.delay(stepDelay),
+          Animated.parallel([
+            Animated.timing(xAnim, {
+              toValue: targetX,
+              duration,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(yAnim, {
+              toValue: targetY,
+              duration,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
+        ]).start(({ finished }) => {
+          if (finished && !cancelled) {
+            step(0);
+          }
+        });
+      };
+
+      step(delay);
+    };
+
+    floatBubble(bubbleX1, bubbleY1, 8200, 11600, 0);
+    floatBubble(bubbleX2, bubbleY2, 9000, 12800, 220);
+    floatBubble(bubbleX3, bubbleY3, 9600, 13200, 120);
+    floatBubble(bubbleX4, bubbleY4, 8800, 12200, 340);
+    floatBubble(bubbleX5, bubbleY5, 9800, 13800, 260);
+    floatBubble(bubbleX6, bubbleY6, 9200, 12600, 380);
+    floatBubble(bubbleX7, bubbleY7, 9400, 13400, 180);
+    floatBubble(bubbleX8, bubbleY8, 9000, 13000, 320);
+
+    return () => {
+      cancelled = true;
+    };
   // Animation refs are intentionally stable for a single mount lifecycle.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -129,6 +203,38 @@ export default function HomeScreen() {
     outputRange: [0.15, 0],
   });
 
+  const buildBubbleRandomStyle = (xAnim: Animated.Value, yAnim: Animated.Value) => ({
+    opacity: yAnim.interpolate({
+      inputRange: [height * 0.05, height * 0.45, height * 0.9],
+      outputRange: [0.6, 0.72, 0.58],
+    }),
+    transform: [
+      { translateX: xAnim },
+      { translateY: yAnim },
+      {
+        scale: xAnim.interpolate({
+          inputRange: [width * 0.04, width * 0.43, width * 0.82],
+          outputRange: [0.98, 1.03, 0.99],
+        }),
+      },
+      {
+        rotate: yAnim.interpolate({
+          inputRange: [height * 0.05, height * 0.45, height * 0.9],
+          outputRange: ['-1deg', '1.2deg', '-0.8deg'],
+        }),
+      },
+    ],
+  });
+
+  const bubbleOneAnimatedStyle = buildBubbleRandomStyle(bubbleX1, bubbleY1);
+  const bubbleTwoAnimatedStyle = buildBubbleRandomStyle(bubbleX2, bubbleY2);
+  const bubbleThreeAnimatedStyle = buildBubbleRandomStyle(bubbleX3, bubbleY3);
+  const bubbleFourAnimatedStyle = buildBubbleRandomStyle(bubbleX4, bubbleY4);
+  const bubbleFiveAnimatedStyle = buildBubbleRandomStyle(bubbleX5, bubbleY5);
+  const bubbleSixAnimatedStyle = buildBubbleRandomStyle(bubbleX6, bubbleY6);
+  const bubbleSevenAnimatedStyle = buildBubbleRandomStyle(bubbleX7, bubbleY7);
+  const bubbleEightAnimatedStyle = buildBubbleRandomStyle(bubbleX8, bubbleY8);
+
   function FeaturePill({ icon, label }: { icon: string; label: string }) {
     return (
       <View style={styles.pill}>
@@ -140,10 +246,16 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Soft layered background */}
+      {/* Minimal bubble background */}
       <View style={styles.bgGradient} />
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
+      <Animated.View style={[styles.bubble, styles.bubbleA, bubbleOneAnimatedStyle]} />
+      <Animated.View style={[styles.bubble, styles.bubbleB, bubbleTwoAnimatedStyle]} />
+      <Animated.View style={[styles.bubble, styles.bubbleC, bubbleThreeAnimatedStyle]} />
+      <Animated.View style={[styles.bubble, styles.bubbleD, bubbleFourAnimatedStyle]} />
+      <Animated.View style={[styles.bubble, styles.bubbleE, bubbleFiveAnimatedStyle]} />
+      <Animated.View style={[styles.bubble, styles.bubbleF, bubbleSixAnimatedStyle]} />
+      <Animated.View style={[styles.bubble, styles.bubbleG, bubbleSevenAnimatedStyle]} />
+      <Animated.View style={[styles.bubble, styles.bubbleH, bubbleEightAnimatedStyle]} />
 
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
@@ -154,74 +266,71 @@ export default function HomeScreen() {
           ]}
         >
           <Text style={styles.logoText}>Fluency</Text>
-          <Text style={styles.logoAccent}>learn by looking</Text>
-          <View style={styles.taglineRow}>
-            <View style={styles.taglineDash} />
-            <Text style={styles.tagline}>Translate the world around you,{"\n"}one object at a time.</Text>
-            <View style={styles.taglineDash} />
-          </View>
+          <Text style={styles.logoAccent}>Translate the world around you.</Text>
         </Animated.View>
 
-        {/* Center launch button */}
-        <Animated.View
-          style={[
-            styles.buttonZone,
-            { opacity: fadeIn },
-          ]}
-        >
-          {/* Pulsing rings */}
+        {/* Middle launch button */}
+        <View style={styles.middleSection}>
           <Animated.View
             style={[
-              styles.ring,
-              {
-                transform: [{ scale: ring1 }],
-                opacity: ringOpacity1,
-              },
+              styles.buttonZone,
+              { opacity: fadeIn },
             ]}
-          />
-          <Animated.View
-            style={[
-              styles.ring,
-              styles.ringLarge,
-              {
-                transform: [{ scale: ring2 }],
-                opacity: ringOpacity2,
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.ring,
-              styles.ringXL,
-              {
-                transform: [{ scale: ring3 }],
-                opacity: ringOpacity3,
-              },
-            ]}
-          />
-
-          {/* Glow layer */}
-          <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
-
-          {/* Main button */}
-          <TouchableOpacity
-            onPress={handleLaunch}
-            activeOpacity={0.85}
-            style={styles.buttonWrapper}
           >
+            {/* Pulsing rings */}
             <Animated.View
               style={[
-                styles.button,
-                { transform: [{ scale: pulseAnim }] },
+                styles.ring,
+                {
+                  transform: [{ scale: ring1 }],
+                  opacity: ringOpacity1,
+                },
               ]}
+            />
+            <Animated.View
+              style={[
+                styles.ring,
+                styles.ringLarge,
+                {
+                  transform: [{ scale: ring2 }],
+                  opacity: ringOpacity2,
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.ring,
+                styles.ringXL,
+                {
+                  transform: [{ scale: ring3 }],
+                  opacity: ringOpacity3,
+                },
+              ]}
+            />
+
+            {/* Glow layer */}
+            <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
+
+            {/* Main button */}
+            <TouchableOpacity
+              onPress={handleLaunch}
+              activeOpacity={0.85}
+              style={styles.buttonWrapper}
             >
-              {/* Inner circle detail */}
-              <View style={styles.buttonInner}>
-                <Text style={styles.buttonLabel}>Tap to start</Text>
-              </View>
-            </Animated.View>
-          </TouchableOpacity>
-        </Animated.View>
+              <Animated.View
+                style={[
+                  styles.button,
+                  { transform: [{ scale: pulseAnim }] },
+                ]}
+              >
+                {/* Inner circle detail */}
+                <View style={styles.buttonInner}>
+                  <Text style={styles.buttonLabel}>Tap to start</Text>
+                </View>
+              </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
 
         {/* Bottom info */}
         <Animated.View
@@ -244,7 +353,7 @@ export default function HomeScreen() {
   );
 }
 
-const BUTTON_SIZE = 180;
+const BUTTON_SIZE = 210;
 const RING_SIZE = BUTTON_SIZE + 40;
 
 const createStyles = () =>
@@ -257,75 +366,95 @@ const createStyles = () =>
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#FFFFFF',
   },
-  bgCircle1: {
+  bubble: {
     position: 'absolute',
-    width: width * 1.2,
-    height: width * 1.2,
-    borderRadius: width * 0.6,
-    backgroundColor: '#FFF2E8',
-    top: -width * 0.3,
-    left: -width * 0.1,
+    backgroundColor: 'rgba(217,119,43,0.06)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(217,119,43,0.26)',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
-  bgCircle2: {
-    position: 'absolute',
-    width: width,
-    height: width,
-    borderRadius: width * 0.5,
-    backgroundColor: '#FFF8F2',
-    bottom: -width * 0.2,
-    right: -width * 0.2,
+  bubbleA: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+  },
+  bubbleB: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  bubbleC: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+  },
+  bubbleD: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  bubbleE: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+  },
+  bubbleF: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  bubbleG: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  bubbleH: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
   safeArea: {
     flex: 1,
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 40,
+    justifyContent: 'flex-start',
+    paddingTop: 32,
+    paddingBottom: 28,
+  },
+
+  middleSection: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Header
   header: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 6,
   },
   logoText: {
     fontSize: 56,
-    color: '#241A12',
-    fontFamily: Fonts.rounded,
+    color: '#873429',
+    fontFamily: Fonts.serif,
     letterSpacing: 0.2,
     lineHeight: 62,
   },
   logoAccent: {
     fontSize: 18,
-    color: '#3A8F8A',
-    fontFamily: Fonts.rounded,
+    color: '#000000',
+    fontFamily: Fonts.sans,
     letterSpacing: 0.4,
     lineHeight: 26,
-    textShadowColor: 'rgba(58, 143, 138, 0.12)',
+    marginTop: 14,
+    textShadowColor: 'rgba(217, 119, 43, 0.14)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 4,
   },
-  taglineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    gap: 10,
-    paddingHorizontal: 28,
-  },
-  taglineDash: {
-    width: 14,
-    height: 1,
-    backgroundColor: 'rgba(58,143,138,0.26)',
-  },
-  tagline: {
-    flexShrink: 1,
-    textAlign: 'center',
-    fontSize: 14,
-    color: 'rgba(62,48,36,0.75)',
-    letterSpacing: 0.2,
-    lineHeight: 20,
-    fontFamily: Fonts.rounded,
-  },
-
   // Button zone
   buttonZone: {
     alignItems: 'center',
@@ -339,7 +468,7 @@ const createStyles = () =>
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
     borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.24)',
+    borderColor: 'rgba(217,119,43,0.24)',
   },
   ringLarge: {
     width: RING_SIZE + 50,
@@ -356,7 +485,7 @@ const createStyles = () =>
     width: BUTTON_SIZE + 60,
     height: BUTTON_SIZE + 60,
     borderRadius: (BUTTON_SIZE + 60) / 2,
-    backgroundColor: 'rgba(58,143,138,0.09)',
+    backgroundColor: 'rgba(217,119,43,0.08)',
   },
   buttonWrapper: {
     alignItems: 'center',
@@ -368,10 +497,10 @@ const createStyles = () =>
     borderRadius: BUTTON_SIZE / 2,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.34)',
+    borderColor: 'rgba(217,119,43,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3A8F8A',
+    shadowColor: '#D9772B',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
@@ -383,10 +512,10 @@ const createStyles = () =>
     gap: 2,
   },
   buttonLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: 'rgba(62,48,36,0.78)',
-    letterSpacing: 0.3,
-    fontFamily: Fonts.rounded,
+    letterSpacing: 0.4,
+    fontFamily: Fonts.sans,
   },
 
   // Footer
@@ -394,6 +523,7 @@ const createStyles = () =>
     alignItems: 'center',
     gap: 16,
     paddingHorizontal: 30,
+    paddingBottom: 4,
   },
   featureRow: {
     flexDirection: 'row',
@@ -416,7 +546,7 @@ const createStyles = () =>
     fontSize: 13,
     color: 'rgba(62,48,36,0.68)',
     letterSpacing: 0.2,
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.sans,
   },
   footerNote: {
     fontSize: 13,
