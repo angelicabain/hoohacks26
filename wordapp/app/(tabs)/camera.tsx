@@ -4,26 +4,23 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Animated,
   Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Fonts } from '@/constants/theme';
 
-const { width, height } = Dimensions.get('window');
 const RETICLE = 220;
 
 export default function CameraScreen() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
+  const styles = createStyles();
 
   // Reticle corner animations
   const cornerFade = useRef(new Animated.Value(0)).current;
-  const scanLine = useRef(new Animated.Value(0)).current;
-  const scanOpacity = useRef(new Animated.Value(0.6)).current;
-  const statusPulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Fade in corners
@@ -33,62 +30,9 @@ export default function CameraScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-
-    // Scan line loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanLine, {
-          toValue: 1,
-          duration: 2200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scanLine, {
-          toValue: 0,
-          duration: 2200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Scan line opacity flicker
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scanOpacity, {
-          toValue: 0.4,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Status dot pulse
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(statusPulse, {
-          toValue: 1.4,
-          duration: 900,
-          useNativeDriver: true,
-        }),
-        Animated.timing(statusPulse, {
-          toValue: 1,
-          duration: 900,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+  // Animation refs are intentionally stable for a single mount lifecycle.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const scanLineY = scanLine.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, RETICLE - 2],
-  });
 
   // --- Permission not yet determined ---
   if (!permission) {
@@ -103,12 +47,12 @@ export default function CameraScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.permTitle}>Camera Access Needed</Text>
+        <Text style={styles.permTitle}>Camera access needed</Text>
         <Text style={styles.permText}>
-          LangLens uses your camera to detect objects and teach you vocabulary.
+          Fluency uses your camera to detect objects and teach you vocabulary.
         </Text>
         <TouchableOpacity style={styles.permButton} onPress={requestPermission}>
-          <Text style={styles.permButtonText}>Grant Access</Text>
+          <Text style={styles.permButtonText}>Grant access</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
           <Text style={styles.backLinkText}>← Go back</Text>
@@ -122,9 +66,6 @@ export default function CameraScreen() {
       {/* Full-screen camera */}
       <CameraView style={StyleSheet.absoluteFill} facing="back" />
 
-      {/* Dark vignette overlay */}
-      <View style={styles.vignette} pointerEvents="none" />
-
       <SafeAreaView style={styles.safeArea}>
         {/* Top bar */}
         <View style={styles.topBar}>
@@ -137,19 +78,10 @@ export default function CameraScreen() {
           </TouchableOpacity>
 
           <View style={styles.topCenter}>
-            <Text style={styles.topTitle}>LANGLENS</Text>
+            <Text style={styles.topTitle}>Fluency</Text>
           </View>
 
-          {/* Status indicator */}
-          <View style={styles.statusBadge}>
-            <Animated.View
-              style={[
-                styles.statusDot,
-                { transform: [{ scale: statusPulse }] },
-              ]}
-            />
-            <Text style={styles.statusText}>LIVE</Text>
-          </View>
+          <View style={styles.topSpacer} />
         </View>
 
         {/* Center reticle */}
@@ -160,17 +92,6 @@ export default function CameraScreen() {
           <View style={[styles.corner, styles.cornerBL]} />
           <View style={[styles.corner, styles.cornerBR]} />
 
-          {/* Scan line */}
-          <Animated.View
-            style={[
-              styles.scanLine,
-              {
-                transform: [{ translateY: scanLineY }],
-                opacity: scanOpacity,
-              },
-            ]}
-          />
-
           {/* Center crosshair dot */}
           <View style={styles.crosshair} />
         </Animated.View>
@@ -179,10 +100,9 @@ export default function CameraScreen() {
         <View style={styles.bottomBar}>
           <View style={styles.hintBox}>
             <Text style={styles.hintText}>
-              Point at any object to detect & translate
+              Point at any object to detect and translate
             </Text>
           </View>
-          <Text style={styles.chineseHint}>对准物体开始识别</Text>
         </View>
       </SafeAreaView>
     </View>
@@ -192,14 +112,15 @@ export default function CameraScreen() {
 const CORNER_LENGTH = 22;
 const CORNER_THICKNESS = 3;
 
-const styles = StyleSheet.create({
+const createStyles = () =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#FFFFFF',
   },
   centered: {
     flex: 1,
-    backgroundColor: '#060810',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -207,46 +128,41 @@ const styles = StyleSheet.create({
   },
   permTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#fff',
+    color: '#2C241C',
     marginBottom: 4,
+    fontFamily: Fonts.rounded,
   },
   permText: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(62,48,36,0.74)',
     textAlign: 'center',
     lineHeight: 22,
+    fontFamily: Fonts.sans,
   },
   permButton: {
     marginTop: 8,
-    backgroundColor: '#4DAAFF',
+    backgroundColor: '#3A8F8A',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 30,
   },
   permButtonText: {
-    color: '#000',
+    color: '#FFF9F3',
     fontWeight: '700',
     fontSize: 15,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
+    fontFamily: Fonts.rounded,
   },
   backLink: {
     marginTop: 4,
     padding: 8,
   },
   backLinkText: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(62,48,36,0.64)',
     fontSize: 14,
+    fontFamily: Fonts.rounded,
   },
 
-  // Camera UI
-  vignette: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
-    // Simulate vignette with semi-transparent edges
-    borderWidth: 80,
-    borderColor: 'rgba(0,0,0,0.45)',
-  },
   safeArea: {
     flex: 1,
     alignItems: 'center',
@@ -266,14 +182,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(58,143,138,0.24)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   backArrow: {
-    color: '#fff',
+    color: '#2C241C',
     fontSize: 28,
     lineHeight: 32,
     fontWeight: '300',
@@ -281,40 +197,16 @@ const styles = StyleSheet.create({
   topCenter: {
     alignItems: 'center',
   },
+  topSpacer: {
+    width: 40,
+    height: 40,
+  },
   topTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.75)',
-    letterSpacing: 5,
+    fontSize: 24,
+    color: '#2C241C',
+    letterSpacing: 0.1,
+    fontFamily: Fonts.rounded,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4DFFAA',
-    shadowColor: '#4DFFAA',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-  },
-  statusText: {
-    color: '#4DFFAA',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-
   // Reticle
   reticleWrapper: {
     width: RETICLE,
@@ -333,50 +225,38 @@ const styles = StyleSheet.create({
     left: 0,
     borderTopWidth: CORNER_THICKNESS,
     borderLeftWidth: CORNER_THICKNESS,
-    borderColor: '#4DAAFF',
+    borderColor: '#3A8F8A',
   },
   cornerTR: {
     top: 0,
     right: 0,
     borderTopWidth: CORNER_THICKNESS,
     borderRightWidth: CORNER_THICKNESS,
-    borderColor: '#4DAAFF',
+    borderColor: '#3A8F8A',
   },
   cornerBL: {
     bottom: 0,
     left: 0,
     borderBottomWidth: CORNER_THICKNESS,
     borderLeftWidth: CORNER_THICKNESS,
-    borderColor: '#4DAAFF',
+    borderColor: '#3A8F8A',
   },
   cornerBR: {
     bottom: 0,
     right: 0,
     borderBottomWidth: CORNER_THICKNESS,
     borderRightWidth: CORNER_THICKNESS,
-    borderColor: '#4DAAFF',
-  },
-  scanLine: {
-    position: 'absolute',
-    top: 0,
-    left: 8,
-    right: 8,
-    height: 1.5,
-    backgroundColor: '#4DAAFF',
-    shadowColor: '#4DAAFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
+    borderColor: '#3A8F8A',
   },
   crosshair: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(77, 170, 255, 0.8)',
-    shadowColor: '#4DAAFF',
+    backgroundColor: 'rgba(58,143,138,0.82)',
+    shadowColor: '#3A8F8A',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
   },
 
   // Bottom bar
@@ -386,21 +266,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   hintBox: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.88)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(58,143,138,0.2)',
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
   hintText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(62,48,36,0.78)',
     fontSize: 12,
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
     textAlign: 'center',
-  },
-  chineseHint: {
-    color: 'rgba(255,255,255,0.2)',
-    fontSize: 12,
+    fontFamily: Fonts.rounded,
   },
 });
