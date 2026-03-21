@@ -42,7 +42,7 @@ async def detect(request: DetectRequest):
             "requests": [
                 {
                     "image": {"content": request.image},
-                    "features": [{"type": "LABEL_DETECTION", "maxResults": 3}],
+                    "features": [{"type": "LABEL_DETECTION", "maxResults": 10}],
                 }
             ]
         }
@@ -60,7 +60,20 @@ async def detect(request: DetectRequest):
         if not annotations:
             raise HTTPException(status_code=404, detail="No objects detected")
 
-        english_label = annotations[0]["description"]
+        GENERIC_LABELS = {
+            "food", "liquid", "product", "material", "organism",
+            "electronic device", "gadget", "kitchen utensil", "drinkware",
+            "tableware", "furniture", "office supplies", "plant", "ingredient",
+        }
+
+        # Filter out generic labels, sort by topicality
+        specific = [
+            a for a in annotations
+            if a["description"].lower() not in GENERIC_LABELS
+        ]
+        candidates = specific if specific else annotations
+        best = max(candidates, key=lambda a: a.get("topicality", 0))
+        english_label = best["description"]
 
         # Step 2: Google Cloud Translation — translate to target language
         translate_url = f"https://translation.googleapis.com/language/translate/v2?key={GOOGLE_CLOUD_API_KEY}"
