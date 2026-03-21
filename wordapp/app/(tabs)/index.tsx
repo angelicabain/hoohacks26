@@ -10,11 +10,13 @@ import {
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Fonts } from '@/constants/theme';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
+  const styles = createStyles();
 
   // Animation refs
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -101,6 +103,8 @@ export default function HomeScreen() {
     ringAnimation(ring1, 0);
     ringAnimation(ring2, 900);
     ringAnimation(ring3, 1800);
+  // Animation refs are intentionally stable for a single mount lifecycle.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLaunch = () => {
@@ -125,9 +129,18 @@ export default function HomeScreen() {
     outputRange: [0.15, 0],
   });
 
+  function FeaturePill({ icon, label }: { icon: string; label: string }) {
+    return (
+      <View style={styles.pill}>
+        <Text style={styles.pillIcon}>{icon}</Text>
+        <Text style={styles.pillLabel}>{label}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Dark atmospheric background */}
+      {/* Soft layered background */}
       <View style={styles.bgGradient} />
       <View style={styles.bgCircle1} />
       <View style={styles.bgCircle2} />
@@ -140,11 +153,11 @@ export default function HomeScreen() {
             { opacity: fadeIn, transform: [{ translateY: slideUp }] },
           ]}
         >
-          <Text style={styles.logoText}>LANG</Text>
-          <Text style={styles.logoAccent}>LENS</Text>
+          <Text style={styles.logoText}>Fluency</Text>
+          <Text style={styles.logoAccent}>learn by looking</Text>
           <View style={styles.taglineRow}>
             <View style={styles.taglineDash} />
-            <Text style={styles.tagline}>SEE THE WORLD, LEARN THE LANGUAGE</Text>
+            <Text style={styles.tagline}>Translate the world around you,{"\n"}one object at a time.</Text>
             <View style={styles.taglineDash} />
           </View>
         </Animated.View>
@@ -204,8 +217,7 @@ export default function HomeScreen() {
             >
               {/* Inner circle detail */}
               <View style={styles.buttonInner}>
-                <Text style={styles.buttonIcon}>镜</Text>
-                <Text style={styles.buttonLabel}>TAP TO START</Text>
+                <Text style={styles.buttonLabel}>Tap to start</Text>
               </View>
             </Animated.View>
           </TouchableOpacity>
@@ -220,11 +232,11 @@ export default function HomeScreen() {
         >
           <View style={styles.featureRow}>
             <FeaturePill icon="👁" label="Detect" />
-            <FeaturePill icon="文" label="Translate" />
-            <FeaturePill icon="🔊" label="Pronounce" />
+            <FeaturePill icon="📝" label="Translate" />
+            <FeaturePill icon="🔊" label="Speak" />
           </View>
           <Text style={styles.footerNote}>
-            Point your camera at any object to learn it in Chinese
+            Point your camera at any object to build everyday fluency
           </Text>
         </Animated.View>
       </SafeAreaView>
@@ -232,33 +244,25 @@ export default function HomeScreen() {
   );
 }
 
-function FeaturePill({ icon, label }: { icon: string; label: string }) {
-  return (
-    <View style={styles.pill}>
-      <Text style={styles.pillIcon}>{icon}</Text>
-      <Text style={styles.pillLabel}>{label}</Text>
-    </View>
-  );
-}
-
 const BUTTON_SIZE = 180;
 const RING_SIZE = BUTTON_SIZE + 40;
 
-const styles = StyleSheet.create({
+const createStyles = () =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#060810',
+    backgroundColor: '#FFFFFF',
   },
   bgGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#060810',
+    backgroundColor: '#FFFFFF',
   },
   bgCircle1: {
     position: 'absolute',
     width: width * 1.2,
     height: width * 1.2,
     borderRadius: width * 0.6,
-    backgroundColor: '#0a1628',
+    backgroundColor: '#FFF2E8',
     top: -width * 0.3,
     left: -width * 0.1,
   },
@@ -267,7 +271,7 @@ const styles = StyleSheet.create({
     width: width,
     height: width,
     borderRadius: width * 0.5,
-    backgroundColor: '#08111f',
+    backgroundColor: '#FFF8F2',
     bottom: -width * 0.2,
     right: -width * 0.2,
   },
@@ -284,38 +288,42 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   logoText: {
-    fontSize: 52,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 14,
-    lineHeight: 56,
+    fontSize: 56,
+    color: '#241A12',
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.2,
+    lineHeight: 62,
   },
   logoAccent: {
-    fontSize: 52,
-    fontWeight: '800',
-    color: '#4DAAFF',
-    letterSpacing: 14,
-    lineHeight: 56,
-    textShadowColor: 'rgba(77, 170, 255, 0.6)',
+    fontSize: 18,
+    color: '#3A8F8A',
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.4,
+    lineHeight: 26,
+    textShadowColor: 'rgba(58, 143, 138, 0.12)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
+    textShadowRadius: 4,
   },
   taglineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: 10,
     gap: 10,
+    paddingHorizontal: 28,
   },
   taglineDash: {
-    width: 24,
+    width: 14,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(58,143,138,0.26)',
   },
   tagline: {
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 3,
-    fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    color: 'rgba(62,48,36,0.75)',
+    letterSpacing: 0.2,
+    lineHeight: 20,
+    fontFamily: Fonts.rounded,
   },
 
   // Button zone
@@ -330,8 +338,8 @@ const styles = StyleSheet.create({
     width: RING_SIZE,
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
-    borderWidth: 1.5,
-    borderColor: '#4DAAFF',
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,138,0.24)',
   },
   ringLarge: {
     width: RING_SIZE + 50,
@@ -348,7 +356,7 @@ const styles = StyleSheet.create({
     width: BUTTON_SIZE + 60,
     height: BUTTON_SIZE + 60,
     borderRadius: (BUTTON_SIZE + 60) / 2,
-    backgroundColor: 'rgba(77, 170, 255, 0.15)',
+    backgroundColor: 'rgba(58,143,138,0.09)',
   },
   buttonWrapper: {
     alignItems: 'center',
@@ -358,34 +366,27 @@ const styles = StyleSheet.create({
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
     borderRadius: BUTTON_SIZE / 2,
-    backgroundColor: '#0d1f3c',
-    borderWidth: 2,
-    borderColor: '#4DAAFF',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(58,143,138,0.34)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#4DAAFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    elevation: 20,
+    shadowColor: '#3A8F8A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 3,
   },
   buttonInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-  },
-  buttonIcon: {
-    fontSize: 52,
-    color: '#4DAAFF',
-    textShadowColor: 'rgba(77, 170, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
+    gap: 2,
   },
   buttonLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 3,
+    fontSize: 14,
+    color: 'rgba(62,48,36,0.78)',
+    letterSpacing: 0.3,
+    fontFamily: Fonts.rounded,
   },
 
   // Footer
@@ -396,32 +397,32 @@ const styles = StyleSheet.create({
   },
   featureRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 20,
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     gap: 6,
   },
   pillIcon: {
-    fontSize: 14,
+    fontSize: 15,
+    opacity: 0.75,
   },
   pillLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.55)',
-    letterSpacing: 1.5,
+    fontSize: 13,
+    color: 'rgba(62,48,36,0.68)',
+    letterSpacing: 0.2,
+    fontFamily: Fonts.rounded,
   },
   footerNote: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.2)',
+    fontSize: 13,
+    color: 'rgba(62,48,36,0.62)',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
+    fontFamily: Fonts.sans,
   },
 });

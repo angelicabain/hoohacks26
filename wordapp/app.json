@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "wordapp",
-    "slug": "wordapp",
+    "name": "Fluency",
+    "slug": "fluency",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "wordapp",
+    "scheme": "fluency",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
