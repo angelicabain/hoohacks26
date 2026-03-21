@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 16,
-    color: '#3A8F8A',
+    color: '#D9772B',
     fontFamily: Fonts.rounded,
     letterSpacing: 0.4,
     marginBottom: 20,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backText: {
-    color: '#3A8F8A',
+    color: '#D9772B',
     fontSize: 15,
     fontFamily: Fonts.rounded,
   },
