@@ -9,6 +9,7 @@ import {
   TextInput,
   Keyboard,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -50,6 +51,7 @@ export default function CameraScreen() {
   const cornerFade = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(CARD_HEIGHT)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
+  const keyboardLift = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(cornerFade, {
@@ -60,6 +62,36 @@ export default function CameraScreen() {
     }).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Lift the learning card above the keyboard when typing.
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      const targetLift = Math.max(0, event.endCoordinates.height - 14);
+      Animated.timing(keyboardLift, {
+        toValue: targetLift,
+        duration: event.duration ?? 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      Animated.timing(keyboardLift, {
+        toValue: 0,
+        duration: event.duration ?? 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardLift]);
 
   // --- Scan loop: start/stop based on mode ---
   const startScanning = useCallback(() => {
@@ -258,7 +290,7 @@ export default function CameraScreen() {
           style={[
             styles.learningCard,
             {
-              transform: [{ translateY: cardSlide }],
+              transform: [{ translateY: cardSlide }, { translateY: Animated.multiply(keyboardLift, -1) }],
               opacity: cardOpacity,
             },
           ]}
