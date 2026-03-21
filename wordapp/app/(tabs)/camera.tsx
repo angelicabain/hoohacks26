@@ -9,6 +9,7 @@ import {
   TextInput,
   Keyboard,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -24,10 +25,13 @@ const CARD_HEIGHT = SCREEN_HEIGHT * 0.4;
 export default function CameraScreen() {
   const router = useRouter();
   const { langCode, langLocale, langLabel } = useLocalSearchParams<{
-    langCode: string;
-    langLocale: string;
-    langLabel: string;
+    langCode?: string;
+    langLocale?: string;
+    langLabel?: string;
   }>();
+  const effectiveLangCode = langCode ?? 'es';
+  const effectiveLangLocale = langLocale ?? 'es-ES';
+  const effectiveLangLabel = langLabel ?? 'Spanish';
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const styles = createStyles();
@@ -39,6 +43,8 @@ export default function CameraScreen() {
 
   // Detection / learning state
   const [result, setResult] = useState<DetectResult | null>(null);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectError, setDetectError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [guessMode, setGuessMode] = useState(false);
   const [guess, setGuess] = useState('');
@@ -50,6 +56,7 @@ export default function CameraScreen() {
   const cornerFade = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(CARD_HEIGHT)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
+  const keyboardLift = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(cornerFade, {
@@ -60,6 +67,36 @@ export default function CameraScreen() {
     }).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Lift the learning card above the keyboard when typing.
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      const targetLift = Math.max(0, event.endCoordinates.height - 14);
+      Animated.timing(keyboardLift, {
+        toValue: targetLift,
+        duration: event.duration ?? 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      Animated.timing(keyboardLift, {
+        toValue: 0,
+        duration: event.duration ?? 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardLift]);
 
   // --- Scan loop: start/stop based on mode ---
   const startScanning = useCallback(() => {
@@ -75,12 +112,12 @@ export default function CameraScreen() {
           quality: 0.3,
         });
 
-        if (photo?.base64 && langCode) {
-          const detection = await detectObject(photo.base64, langCode);
-
+        if (photo?.base64) {
           // Stop scanning, transition to learning
           stopScanning();
-          setResult(detection);
+          setResult(null);
+          setIsDetecting(true);
+          setDetectError(null);
           setRevealed(false);
           setGuessMode(false);
           setGuess('');
@@ -103,6 +140,16 @@ export default function CameraScreen() {
               useNativeDriver: true,
             }),
           ]).start();
+
+          try {
+            const detection = await detectObject(photo.base64, effectiveLangCode);
+            setResult(detection);
+            setDetectError(null);
+          } catch {
+            setDetectError('Could not detect object. Try scanning again.');
+          } finally {
+            setIsDetecting(false);
+          }
         }
       } catch {
         // Silently fail — next interval will retry
@@ -111,7 +158,7 @@ export default function CameraScreen() {
       }
     }, 4000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [langCode]);
+  }, [effectiveLangCode]);
 
   const stopScanning = useCallback(() => {
     if (intervalRef.current) {
@@ -157,6 +204,8 @@ export default function CameraScreen() {
       }),
     ]).start(() => {
       setResult(null);
+      setIsDetecting(false);
+      setDetectError(null);
       setMode('scanning');
       Keyboard.dismiss();
     });
@@ -164,10 +213,13 @@ export default function CameraScreen() {
   }, [result]);
 
   const handleSpeak = useCallback(() => {
-    if (result?.target && langLocale) {
-      Speech.speak(result.target, { language: langLocale });
+    if (result?.target) {
+      Speech.speak(result.target, {
+        language: effectiveLangLocale,
+        rate: 0.50,
+      });
     }
-  }, [result, langLocale]);
+  }, [result, effectiveLangLocale]);
 
   const handleCheckGuess = useCallback(() => {
     if (!result) return;
@@ -224,9 +276,7 @@ export default function CameraScreen() {
 
           <View style={styles.topCenter}>
             <Text style={styles.topTitle}>Fluency</Text>
-            {langLabel ? (
-              <Text style={styles.topLang}>{langLabel}</Text>
-            ) : null}
+            <Text style={styles.topLang}>{effectiveLangLabel}</Text>
           </View>
 
           <View style={styles.wordCounter}>
@@ -253,12 +303,12 @@ export default function CameraScreen() {
       </SafeAreaView>
 
       {/* Learning card — slides up from bottom */}
-      {result && (
+      {mode === 'learning' && (
         <Animated.View
           style={[
             styles.learningCard,
             {
-              transform: [{ translateY: cardSlide }],
+              transform: [{ translateY: cardSlide }, { translateY: Animated.multiply(keyboardLift, -1) }],
               opacity: cardOpacity,
             },
           ]}
@@ -272,74 +322,94 @@ export default function CameraScreen() {
             <Text style={styles.dismissText}>✕</Text>
           </TouchableOpacity>
 
-          {/* English word */}
-          <Text style={styles.englishWord}>{result.english}</Text>
+          {isDetecting ? (
+            <View style={styles.stateWrap}>
+              <Text style={styles.stateTitle}>Detecting object...</Text>
+              <Text style={styles.stateSubtitle}>Hold steady for a moment.</Text>
+            </View>
+          ) : detectError ? (
+            <View style={styles.stateWrap}>
+              <Text style={styles.stateTitle}>Scan failed</Text>
+              <Text style={styles.stateSubtitle}>{detectError}</Text>
+            </View>
+          ) : result ? (
+            <>
+              {/* English word */}
+              <Text style={styles.englishWord}>{result.english}</Text>
 
-          {/* Target word row */}
-          <View style={styles.targetRow}>
-            {revealed ? (
-              <Text style={styles.targetWord}>{result.target}</Text>
-            ) : (
-              <TouchableOpacity
-                style={styles.revealButton}
-                onPress={() => setRevealed(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.revealText}>Tap to Reveal</Text>
-              </TouchableOpacity>
-            )}
+              {/* Target word row */}
+              <View style={styles.targetRow}>
+                {revealed ? (
+                  <TouchableOpacity
+                    onPress={() => setRevealed(false)}
+                    activeOpacity={0.7}
+                    style={styles.revealedWordButton}
+                  >
+                    <Text style={styles.targetWord}>{result.target}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.revealButton}
+                    onPress={() => setRevealed(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.revealText}>Tap to Reveal</Text>
+                  </TouchableOpacity>
+                )}
 
-            {/* Speaker button */}
-            <TouchableOpacity
-              style={styles.speakerButton}
-              onPress={handleSpeak}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.speakerIcon}>🔊</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Check / Guess area */}
-          {guessMode ? (
-            <View style={styles.guessArea}>
-              <View style={styles.guessRow}>
-                <TextInput
-                  style={styles.guessInput}
-                  placeholder="Type the translation…"
-                  placeholderTextColor="rgba(62,48,36,0.4)"
-                  value={guess}
-                  onChangeText={(text) => {
-                    setGuess(text);
-                    setGuessResult(null);
-                  }}
-                  onSubmitEditing={handleCheckGuess}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                {/* Speaker button */}
                 <TouchableOpacity
-                  style={styles.submitGuess}
-                  onPress={handleCheckGuess}
+                  style={styles.speakerButton}
+                  onPress={handleSpeak}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.submitGuessText}>→</Text>
+                  <Text style={styles.speakerIcon}>🔊</Text>
                 </TouchableOpacity>
               </View>
-              {guessResult === 'correct' && (
-                <Text style={styles.guessCorrect}>✓ Correct!</Text>
+
+              {/* Check / Guess area */}
+              {guessMode ? (
+                <View style={styles.guessArea}>
+                  <View style={styles.guessRow}>
+                    <TextInput
+                      style={styles.guessInput}
+                      placeholder="Type the translation…"
+                      placeholderTextColor="rgba(62,48,36,0.4)"
+                      value={guess}
+                      onChangeText={(text) => {
+                        setGuess(text);
+                        setGuessResult(null);
+                      }}
+                      onSubmitEditing={handleCheckGuess}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      style={styles.submitGuess}
+                      onPress={handleCheckGuess}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.submitGuessText}>→</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {guessResult === 'correct' && (
+                    <Text style={styles.guessCorrect}>✓ Correct!</Text>
+                  )}
+                  {guessResult === 'incorrect' && (
+                    <Text style={styles.guessIncorrect}>✗ Try again</Text>
+                  )}
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.checkButton}
+                  onPress={() => setGuessMode(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.checkText}>Check</Text>
+                </TouchableOpacity>
               )}
-              {guessResult === 'incorrect' && (
-                <Text style={styles.guessIncorrect}>✗ Try again</Text>
-              )}
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.checkButton}
-              onPress={() => setGuessMode(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.checkText}>Check</Text>
-            </TouchableOpacity>
-          )}
+            </>
+          ) : null}
         </Animated.View>
       )}
 
@@ -458,11 +528,11 @@ const createStyles = () =>
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderWidth: 1,
-      borderColor: 'rgba(58,143,138,0.24)',
+      borderColor: 'rgba(217,119,43,0.24)',
     },
     wordCountText: {
       fontSize: 18,
-      color: '#3A8F8A',
+      color: '#D9772B',
       fontWeight: '700',
       fontFamily: Fonts.rounded,
     },
@@ -542,6 +612,26 @@ const createStyles = () =>
       fontWeight: '600',
     },
 
+    stateWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+    },
+    stateTitle: {
+      fontSize: 22,
+      color: '#2C241C',
+      fontFamily: Fonts.rounded,
+      textAlign: 'center',
+    },
+    stateSubtitle: {
+      fontSize: 14,
+      color: 'rgba(62,48,36,0.72)',
+      fontFamily: Fonts.sans,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+
     // Card content
     englishWord: {
       fontSize: 28,
@@ -556,23 +646,29 @@ const createStyles = () =>
       justifyContent: 'center',
       gap: 12,
     },
+    revealedWordButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
     targetWord: {
       fontSize: 24,
-      color: '#3A8F8A',
+      color: '#D9772B',
       fontWeight: '600',
       fontFamily: Fonts.rounded,
     },
     revealButton: {
-      backgroundColor: 'rgba(58,143,138,0.1)',
+      backgroundColor: 'rgba(217,119,43,0.1)',
       paddingHorizontal: 22,
       paddingVertical: 10,
       borderRadius: 18,
       borderWidth: 1,
-      borderColor: 'rgba(58,143,138,0.2)',
+      borderColor: 'rgba(217,119,43,0.2)',
     },
     revealText: {
       fontSize: 15,
-      color: '#3A8F8A',
+      color: '#D9772B',
       fontFamily: Fonts.rounded,
       letterSpacing: 0.2,
     },
@@ -580,7 +676,7 @@ const createStyles = () =>
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: 'rgba(58,143,138,0.1)',
+      backgroundColor: 'rgba(217,119,43,0.1)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -588,7 +684,7 @@ const createStyles = () =>
       fontSize: 20,
     },
     checkButton: {
-      backgroundColor: '#3A8F8A',
+      backgroundColor: '#D9772B',
       paddingHorizontal: 28,
       paddingVertical: 12,
       borderRadius: 22,
@@ -617,7 +713,7 @@ const createStyles = () =>
       flex: 1,
       height: 44,
       borderWidth: 1,
-      borderColor: 'rgba(58,143,138,0.24)',
+      borderColor: 'rgba(217,119,43,0.24)',
       borderRadius: 14,
       paddingHorizontal: 14,
       fontSize: 15,
@@ -626,7 +722,7 @@ const createStyles = () =>
       backgroundColor: '#FFFFFF',
     },
     submitGuess: {
-      backgroundColor: '#3A8F8A',
+      backgroundColor: '#D9772B',
       width: 40,
       height: 40,
       borderRadius: 20,
@@ -639,13 +735,13 @@ const createStyles = () =>
       fontWeight: '600',
     },
     guessCorrect: {
-      color: '#2D8F4E',
+      color: '#D9772B',
       fontSize: 15,
       fontWeight: '600',
       fontFamily: Fonts.rounded,
     },
     guessIncorrect: {
-      color: '#C44D3F',
+      color: '#B65E1C',
       fontSize: 15,
       fontWeight: '600',
       fontFamily: Fonts.rounded,
