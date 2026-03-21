@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAudioPlayer } from 'expo-audio';
 import { Fonts } from '@/constants/theme';
 import {
   type DetectResult,
@@ -89,6 +90,34 @@ export default function QuizScreen() {
   const bounceAnim = useRef(new Animated.Value(1)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const keyboardLift = useRef(new Animated.Value(0)).current;
+  const correctAnswerPlayer = useAudioPlayer(
+    require('@/assets/sounds/ui-button-load-more-roy-s-noise-2-2-00-01.mp3')
+  );
+  const wrongAnswerPlayer = useAudioPlayer(
+    require('@/assets/sounds/844147__mihacappy__sfx_wrong_generic.wav')
+  );
+
+  const playCorrectSound = useCallback(() => {
+    void (async () => {
+      try {
+        await correctAnswerPlayer.seekTo(0);
+        correctAnswerPlayer.play();
+      } catch {
+        // Ignore sound errors so quiz flow is never blocked.
+      }
+    })();
+  }, [correctAnswerPlayer]);
+
+  const playWrongSound = useCallback(() => {
+    void (async () => {
+      try {
+        await wrongAnswerPlayer.seekTo(0);
+        wrongAnswerPlayer.play();
+      } catch {
+        // Ignore sound errors so quiz flow is never blocked.
+      }
+    })();
+  }, [wrongAnswerPlayer]);
 
   // Octopus bob loop
   useEffect(() => {
@@ -180,8 +209,10 @@ export default function QuizScreen() {
     if (matched) {
       setRecallScore((s) => s + 1);
       playBounce();
+      playCorrectSound();
     } else {
       playShake();
+      playWrongSound();
     }
 
     // Move to next after delay
@@ -195,7 +226,7 @@ export default function QuizScreen() {
         setPhase('recall-summary');
       }
     }, delay);
-  }, [showFeedback, guess, currentIndex, quizWords, playBounce, playShake]);
+  }, [showFeedback, guess, currentIndex, quizWords, playBounce, playShake, playCorrectSound, playWrongSound]);
 
   // --- Phase 2: Generate all sentences in one batch call ---
   const startSentencePhase = useCallback(async () => {
@@ -240,6 +271,17 @@ export default function QuizScreen() {
     Keyboard.dismiss();
 
     const attempt = sentenceGuess.trim();
+    const expected = (sentences[sentenceIndex]?.sentence_target ?? '').toLowerCase().trim();
+    const normalizedAttempt = attempt.toLowerCase().trim();
+    const sentenceDistance = levenshtein(normalizedAttempt, expected);
+    const tolerance = Math.max(2, Math.floor(expected.length * 0.12));
+
+    if (expected.length > 0 && sentenceDistance <= tolerance) {
+      playCorrectSound();
+    } else {
+      playWrongSound();
+    }
+
     const newAttempts = [...sentenceAttempts, attempt];
     setSentenceAttempts(newAttempts);
     setSentenceGuess('');
@@ -249,7 +291,7 @@ export default function QuizScreen() {
     } else {
       batchGrade(newAttempts);
     }
-  }, [sentenceGuess, sentenceAttempts, sentenceIndex, sentences.length, batchGrade]);
+  }, [sentenceGuess, sentenceAttempts, sentenceIndex, sentences, batchGrade, playCorrectSound, playWrongSound]);
 
   // --- Octopus face logic ---
   const getRecallOctopus = () => {
