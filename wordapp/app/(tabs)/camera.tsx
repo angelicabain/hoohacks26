@@ -10,6 +10,7 @@ import {
   Keyboard,
   Dimensions,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -21,6 +22,7 @@ import HamburgerMenu from '@/components/hamburger-menu';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_HEIGHT = SCREEN_HEIGHT * 0.4;
+const QUIZ_THRESHOLD = 5;
 
 export default function CameraScreen() {
   const router = useRouter();
@@ -52,12 +54,17 @@ export default function CameraScreen() {
   const [seenWords, setSeenWords] = useState<DetectResult[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Quiz prompt state
+  const [showQuizPrompt, setShowQuizPrompt] = useState(false);
+  const [quizDismissedAt, setQuizDismissedAt] = useState(0);
+
   // Animations
   const cornerFade = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(CARD_HEIGHT)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const keyboardLift = useRef(new Animated.Value(0)).current;
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const octopusBob = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(cornerFade, {
@@ -78,7 +85,43 @@ export default function CameraScreen() {
     };
   }, []);
 
-  // Lift the learning card above the keyboard when typing.
+  // Octopus bob animation
+  useEffect(() => {
+    if (!showQuizPrompt) return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(octopusBob, {
+          toValue: -5,
+          duration: 1200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(octopusBob, {
+          toValue: 5,
+          duration: 1200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQuizPrompt]);
+
+  // Show quiz prompt when threshold reached
+  useEffect(() => {
+    if (
+      mode === 'scanning' &&
+      seenWords.length >= QUIZ_THRESHOLD &&
+      seenWords.length - quizDismissedAt >= QUIZ_THRESHOLD &&
+      !showQuizPrompt
+    ) {
+      setShowQuizPrompt(true);
+    }
+  }, [seenWords.length, mode, quizDismissedAt, showQuizPrompt]);
+
+  // Keyboard lift
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -108,7 +151,7 @@ export default function CameraScreen() {
     };
   }, [keyboardLift]);
 
-  // --- Scan loop: start/stop based on mode ---
+  // --- Scan loop ---
   const startScanning = useCallback(() => {
     if (intervalRef.current) return;
 
@@ -123,7 +166,6 @@ export default function CameraScreen() {
         });
 
         if (photo?.base64) {
-          // Stop scanning, transition to learning
           stopScanning();
           setResult(null);
           setIsDetecting(true);
@@ -132,9 +174,9 @@ export default function CameraScreen() {
           setGuessMode(false);
           setGuess('');
           setGuessResult(null);
+          setShowQuizPrompt(false);
           setMode('learning');
 
-          // Slide card up
           cardSlide.setValue(CARD_HEIGHT);
           cardOpacity.setValue(0);
           Animated.parallel([
@@ -162,7 +204,7 @@ export default function CameraScreen() {
           }
         }
       } catch {
-        // Silently fail — next interval will retry
+        // Silently fail
       } finally {
         isProcessing.current = false;
       }
@@ -177,7 +219,6 @@ export default function CameraScreen() {
     }
   }, []);
 
-  // Start scanning when permission granted
   useEffect(() => {
     if (permission?.granted && mode === 'scanning') {
       startScanning();
@@ -185,7 +226,7 @@ export default function CameraScreen() {
     return () => stopScanning();
   }, [permission?.granted, mode, startScanning, stopScanning]);
 
-  // --- Dismiss card: add word, animate out, resume scanning ---
+  // --- Dismiss learning card ---
   const handleDismiss = useCallback(() => {
     if (autoCloseTimerRef.current) {
       clearTimeout(autoCloseTimerRef.current);
@@ -204,7 +245,6 @@ export default function CameraScreen() {
       });
     }
 
-    // Slide card down / fade out
     Animated.parallel([
       Animated.timing(cardSlide, {
         toValue: CARD_HEIGHT,
@@ -256,7 +296,26 @@ export default function CameraScreen() {
     }
   }, [guess, result, handleDismiss]);
 
-  // --- Permission not yet determined ---
+  const handleStartQuiz = useCallback(() => {
+    setShowQuizPrompt(false);
+    stopScanning();
+    router.push({
+      pathname: '/quiz' as any,
+      params: {
+        words: JSON.stringify(seenWords),
+        langCode: effectiveLangCode,
+        langLocale: effectiveLangLocale,
+        langLabel: effectiveLangLabel,
+      },
+    });
+  }, [seenWords, effectiveLangCode, effectiveLangLocale, effectiveLangLabel, router, stopScanning]);
+
+  const handleDismissQuiz = useCallback(() => {
+    setShowQuizPrompt(false);
+    setQuizDismissedAt(seenWords.length);
+  }, [seenWords.length]);
+
+  // --- Permission states ---
   if (!permission) {
     return (
       <View style={styles.centered}>
@@ -265,7 +324,6 @@ export default function CameraScreen() {
     );
   }
 
-  // --- Permission denied ---
   if (!permission.granted) {
     return (
       <View style={styles.centered}>
@@ -285,11 +343,10 @@ export default function CameraScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Full-screen camera */}
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
 
       <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
-        {/* Top bar — always visible */}
+        {/* Top bar */}
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.menuButton}
@@ -312,35 +369,33 @@ export default function CameraScreen() {
           </View>
         </View>
 
-        {/* Center area */}
+        {/* Center */}
         <View style={styles.centerArea}>
-          {/* Crosshair — always visible */}
           <Animated.View style={[styles.crosshairWrapper, { opacity: cornerFade }]}>
             <View style={styles.crosshair} />
           </Animated.View>
-
-          {/* Scanning indicator */}
           {mode === 'scanning' && (
             <Text style={styles.scanningText}>Scanning…</Text>
           )}
         </View>
 
-        {/* Spacer to push content to bottom */}
         <View />
       </SafeAreaView>
 
-      {/* Learning card — slides up from bottom */}
+      {/* Learning card */}
       {mode === 'learning' && (
         <Animated.View
           style={[
             styles.learningCard,
             {
-              transform: [{ translateY: cardSlide }, { translateY: Animated.multiply(keyboardLift, -1) }],
+              transform: [
+                { translateY: cardSlide },
+                { translateY: Animated.multiply(keyboardLift, -1) },
+              ],
               opacity: cardOpacity,
             },
           ]}
         >
-          {/* Dismiss X button */}
           <TouchableOpacity
             style={styles.dismissButton}
             onPress={handleDismiss}
@@ -361,10 +416,8 @@ export default function CameraScreen() {
             </View>
           ) : result ? (
             <>
-              {/* English word */}
               <Text style={styles.englishWord}>{result.english}</Text>
 
-              {/* Target word row */}
               <View style={styles.targetRow}>
                 {revealed ? (
                   <TouchableOpacity
@@ -384,7 +437,6 @@ export default function CameraScreen() {
                   </TouchableOpacity>
                 )}
 
-                {/* Speaker button */}
                 <TouchableOpacity
                   style={styles.speakerButton}
                   onPress={handleSpeak}
@@ -394,7 +446,6 @@ export default function CameraScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Check / Guess area */}
               {guessMode ? (
                 <View style={styles.guessArea}>
                   <View style={styles.guessRow}>
@@ -440,7 +491,46 @@ export default function CameraScreen() {
         </Animated.View>
       )}
 
-      {/* Hamburger menu overlay */}
+      {/* Quiz prompt — octopus peeking from bottom */}
+      {showQuizPrompt && mode === 'scanning' && (
+        <View style={styles.quizPromptContainer}>
+          {/* Speech bubble */}
+          <View style={styles.speechBubble}>
+            <Text style={styles.speechText}>Ready to test your memory?</Text>
+            <View style={styles.speechTriangle} />
+          </View>
+
+          <View style={styles.quizPromptRow}>
+            {/* Octopus */}
+            <Animated.View style={{ transform: [{ translateY: octopusBob }] }}>
+              <Image
+                source={require('@/assets/images/smiling.png')}
+                style={styles.octopusImage}
+                resizeMode="contain"
+              />
+            </Animated.View>
+
+            {/* Buttons */}
+            <View style={styles.quizPromptButtons}>
+              <TouchableOpacity
+                style={styles.startQuizButton}
+                onPress={handleStartQuiz}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.startQuizText}>Start Quiz</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.laterButton}
+                onPress={handleDismissQuiz}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.laterText}>Later</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       <HamburgerMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
     </View>
   );
@@ -792,7 +882,7 @@ const createStyles = () =>
       fontFamily: Fonts.rounded,
     },
 
-    // Hint box (when no result)
+    // Hint box
     hintBox: {
       backgroundColor: 'rgba(255,255,255,0.88)',
       borderWidth: 1,
@@ -807,5 +897,82 @@ const createStyles = () =>
       letterSpacing: 0.2,
       textAlign: 'center',
       fontFamily: Fonts.sans,
+    },
+
+    // Quiz prompt
+    quizPromptContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      paddingBottom: 32,
+      paddingHorizontal: 20,
+    },
+    speechBubble: {
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    speechText: {
+      fontSize: 15,
+      color: '#2C241C',
+      fontFamily: Fonts.rounded,
+      textAlign: 'center',
+    },
+    speechTriangle: {
+      position: 'absolute',
+      bottom: -8,
+      left: 40,
+      width: 0,
+      height: 0,
+      borderLeftWidth: 8,
+      borderRightWidth: 8,
+      borderTopWidth: 8,
+      borderLeftColor: 'transparent',
+      borderRightColor: 'transparent',
+      borderTopColor: 'rgba(255,255,255,0.95)',
+    },
+    quizPromptRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 16,
+    },
+    octopusImage: {
+      width: 120,
+      height: 120,
+    },
+    quizPromptButtons: {
+      gap: 8,
+      alignItems: 'center',
+      paddingBottom: 10,
+    },
+    startQuizButton: {
+      backgroundColor: '#D9772B',
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 22,
+    },
+    startQuizText: {
+      color: '#FFF9F3',
+      fontSize: 15,
+      fontWeight: '700',
+      fontFamily: Fonts.rounded,
+      letterSpacing: 0.2,
+    },
+    laterButton: {
+      padding: 6,
+    },
+    laterText: {
+      color: 'rgba(255,255,255,0.7)',
+      fontSize: 13,
+      fontFamily: Fonts.rounded,
     },
   });

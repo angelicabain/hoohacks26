@@ -1,4 +1,5 @@
 import os
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,7 +18,12 @@ app.add_middleware(
 )
 
 GOOGLE_CLOUD_API_KEY = os.environ.get("GOOGLE_CLOUD_API_KEY", "")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
+
+# ---------- /detect ----------
 
 class DetectRequest(BaseModel):
     image: str
@@ -105,3 +111,159 @@ async def detect(request: DetectRequest):
             target=translated_text,
             languageCode=request.targetLanguage,
         )
+
+
+# ---------- Language name lookup ----------
+
+LANGUAGE_NAMES = {
+    "es": "Spanish",
+    "fr": "French",
+    "pt": "Portuguese",
+    "zh": "Mandarin Chinese",
+    "ja": "Japanese",
+    "ko": "Korean",
+}
+
+
+# ---------- /generate-sentences (batch) ----------
+
+class WordPair(BaseModel):
+    english: str
+    target: str
+
+
+class GenerateSentencesRequest(BaseModel):
+    words: list[WordPair]
+    targetLanguage: str
+
+
+class SentenceItem(BaseModel):
+    word: str
+    sentence_target: str
+    sentence_english: str
+
+
+class GenerateSentencesResponse(BaseModel):
+    sentences: list[SentenceItem]
+
+
+@app.post("/generate-sentences", response_model=GenerateSentencesResponse)
+async def generate_sentences(request: GenerateSentencesRequest):
+    if not GROQ_API_KEY:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+
+    lang_name = LANGUAGE_NAMES.get(request.targetLanguage, request.targetLanguage)
+
+    word_list = ", ".join(
+        f"'{w.target}' ({w.english})" for w in request.words
+    )
+    prompt = (
+        f"Generate a simple, practical sentence for each of these words that "
+        f"a beginner learning {lang_name} would actually say. Keep each sentence "
+        f"under 10 words. Words: {word_list}. "
+        f"Respond in JSON only as an array: "
+        f'[{{"word": "<english>", "sentence_target": "...", "sentence_english": "..."}}]'
+    )
+
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(
+                GROQ_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Groq API error: {e}")
+
+    try:
+        text = data["choices"][0]["message"]["content"]
+        parsed = json.loads(text)
+        items = [
+            SentenceItem(
+                word=item.get("word", ""),
+                sentence_target=item["sentence_target"],
+                sentence_english=item["sentence_english"],
+            )
+            for item in parsed
+        ]
+        return GenerateSentencesResponse(sentences=items)
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=502, detail=f"Failed to parse Groq response: {e}")
+
+
+# ---------- /grade-sentences (batch) ----------
+
+class SentencePair(BaseModel):
+    correct: str
+    attempt: str
+
+
+class GradeSentencesRequest(BaseModel):
+    pairs: list[SentencePair]
+    targetLanguage: str
+
+
+class GradeItem(BaseModel):
+    score: int
+    feedback: str
+
+
+class GradeSentencesResponse(BaseModel):
+    grades: list[GradeItem]
+
+
+@app.post("/grade-sentences", response_model=GradeSentencesResponse)
+async def grade_sentences(request: GradeSentencesRequest):
+    if not GROQ_API_KEY:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+
+    lang_name = LANGUAGE_NAMES.get(request.targetLanguage, request.targetLanguage)
+
+    pairs_text = "\n".join(
+        f'{i+1}. Correct: "{p.correct}" | Student wrote: "{p.attempt}"'
+        for i, p in enumerate(request.pairs)
+    )
+    prompt = (
+        f"A student is learning {lang_name}. Grade each of their sentence "
+        f"attempts 1-10 and give brief, encouraging feedback in 1 sentence each.\n\n"
+        f"{pairs_text}\n\n"
+        f"Respond in JSON only as an array: "
+        f'[{{"score": <number>, "feedback": "<string>"}}]'
+    )
+
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(
+                GROQ_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Groq API error: {e}")
+
+    try:
+        text = data["choices"][0]["message"]["content"]
+        parsed = json.loads(text)
+        items = [
+            GradeItem(score=int(item["score"]), feedback=str(item["feedback"]))
+            for item in parsed
+        ]
+        return GradeSentencesResponse(grades=items)
+    except (KeyError, IndexError, json.JSONDecodeError, ValueError) as e:
+        raise HTTPException(status_code=502, detail=f"Failed to parse Groq response: {e}")
