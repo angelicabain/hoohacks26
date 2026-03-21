@@ -18,9 +18,12 @@ interface HamburgerMenuProps {
   onClose: () => void;
 }
 
-const MENU_ITEMS = [
+const TOP_MENU_ITEMS = [
   { label: 'Home', icon: '🏠', route: '/' },
   { label: 'Quiz Mode', icon: '✏️', route: '/quiz' },
+] as const;
+
+const BOTTOM_MENU_ITEMS = [
   { label: 'About', icon: 'ℹ️', route: '/about' },
   { label: 'How To', icon: '📖', route: '/howto' },
 ] as const;
@@ -58,7 +61,6 @@ export default function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) 
         }),
       ]).start();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   if (!visible) return null;
@@ -85,37 +87,61 @@ export default function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) 
       <Animated.View
         style={[styles.panel, { transform: [{ translateX: slideAnim }] }]}
       >
-        {/* Close button */}
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeText}>✕</Text>
-        </TouchableOpacity>
-
-        {/* App title */}
-        <Text style={styles.panelTitle}>Fluency</Text>
-
-        {/* Menu items */}
-        <View style={styles.menuList}>
-          {MENU_ITEMS.map((item) => (
-            <TouchableOpacity
-              key={item.label}
-              style={styles.menuItem}
-              onPress={() => handleNavigate(item.route)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
-              <Text style={styles.menuLabel}>{item.label}</Text>
+        <View style={styles.panelContent}>
+          <View>
+            {/* Close button */}
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeText}>✕</Text>
             </TouchableOpacity>
-          ))}
+
+            {/* App title */}
+            <Text style={styles.panelTitle}>Fluency</Text>
+
+            {/* Top menu items */}
+            <View style={styles.menuList}>
+              {TOP_MENU_ITEMS.map((item) => (
+                <TouchableOpacity
+                  key={item.label}
+                  style={styles.menuItem}
+                  onPress={() => handleNavigate(item.route)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.menuIcon}>{item.icon}</Text>
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Bottom menu items */}
+          <View style={[styles.menuList, { marginBottom: 40 }]}>
+            {BOTTOM_MENU_ITEMS.map((item) => (
+              <TouchableOpacity
+                key={item.label}
+                style={styles.menuItem}
+                onPress={() => handleNavigate(item.route)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </Animated.View>
     </View>
   );
 }
 
+
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  panelContent: {
+  flex: 1,
+  justifyContent: 'space-between', // keeps top items at top, bottom items at bottom
   },
   panel: {
     position: 'absolute',

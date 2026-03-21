@@ -214,7 +214,10 @@ export default function CameraScreen() {
 
   const handleSpeak = useCallback(() => {
     if (result?.target) {
-      Speech.speak(result.target, { language: effectiveLangLocale });
+      Speech.speak(result.target, {
+        language: effectiveLangLocale,
+        rate: 0.50,
+      });
     }
   }, [result, effectiveLangLocale]);
 
