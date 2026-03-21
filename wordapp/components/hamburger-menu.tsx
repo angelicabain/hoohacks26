@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(58,143,138,0.1)',
+    borderBottomColor: 'rgba(217,119,43,0.14)',
     gap: 14,
   },
   menuIcon: {
