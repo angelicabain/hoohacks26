@@ -25,10 +25,13 @@ const CARD_HEIGHT = SCREEN_HEIGHT * 0.4;
 export default function CameraScreen() {
   const router = useRouter();
   const { langCode, langLocale, langLabel } = useLocalSearchParams<{
-    langCode: string;
-    langLocale: string;
-    langLabel: string;
+    langCode?: string;
+    langLocale?: string;
+    langLabel?: string;
   }>();
+  const effectiveLangCode = langCode ?? 'es';
+  const effectiveLangLocale = langLocale ?? 'es-ES';
+  const effectiveLangLabel = langLabel ?? 'Spanish';
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const styles = createStyles();
@@ -40,6 +43,8 @@ export default function CameraScreen() {
 
   // Detection / learning state
   const [result, setResult] = useState<DetectResult | null>(null);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectError, setDetectError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [guessMode, setGuessMode] = useState(false);
   const [guess, setGuess] = useState('');
@@ -107,12 +112,12 @@ export default function CameraScreen() {
           quality: 0.3,
         });
 
-        if (photo?.base64 && langCode) {
-          const detection = await detectObject(photo.base64, langCode);
-
+        if (photo?.base64) {
           // Stop scanning, transition to learning
           stopScanning();
-          setResult(detection);
+          setResult(null);
+          setIsDetecting(true);
+          setDetectError(null);
           setRevealed(false);
           setGuessMode(false);
           setGuess('');
@@ -135,6 +140,16 @@ export default function CameraScreen() {
               useNativeDriver: true,
             }),
           ]).start();
+
+          try {
+            const detection = await detectObject(photo.base64, effectiveLangCode);
+            setResult(detection);
+            setDetectError(null);
+          } catch {
+            setDetectError('Could not detect object. Try scanning again.');
+          } finally {
+            setIsDetecting(false);
+          }
         }
       } catch {
         // Silently fail — next interval will retry
@@ -143,7 +158,7 @@ export default function CameraScreen() {
       }
     }, 4000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [langCode]);
+  }, [effectiveLangCode]);
 
   const stopScanning = useCallback(() => {
     if (intervalRef.current) {
@@ -189,6 +204,8 @@ export default function CameraScreen() {
       }),
     ]).start(() => {
       setResult(null);
+      setIsDetecting(false);
+      setDetectError(null);
       setMode('scanning');
       Keyboard.dismiss();
     });
@@ -196,10 +213,10 @@ export default function CameraScreen() {
   }, [result]);
 
   const handleSpeak = useCallback(() => {
-    if (result?.target && langLocale) {
-      Speech.speak(result.target, { language: langLocale });
+    if (result?.target) {
+      Speech.speak(result.target, { language: effectiveLangLocale });
     }
-  }, [result, langLocale]);
+  }, [result, effectiveLangLocale]);
 
   const handleCheckGuess = useCallback(() => {
     if (!result) return;
@@ -256,9 +273,7 @@ export default function CameraScreen() {
 
           <View style={styles.topCenter}>
             <Text style={styles.topTitle}>Fluency</Text>
-            {langLabel ? (
-              <Text style={styles.topLang}>{langLabel}</Text>
-            ) : null}
+            <Text style={styles.topLang}>{effectiveLangLabel}</Text>
           </View>
 
           <View style={styles.wordCounter}>
@@ -285,7 +300,7 @@ export default function CameraScreen() {
       </SafeAreaView>
 
       {/* Learning card — slides up from bottom */}
-      {result && (
+      {mode === 'learning' && (
         <Animated.View
           style={[
             styles.learningCard,
@@ -304,74 +319,88 @@ export default function CameraScreen() {
             <Text style={styles.dismissText}>✕</Text>
           </TouchableOpacity>
 
-          {/* English word */}
-          <Text style={styles.englishWord}>{result.english}</Text>
+          {isDetecting ? (
+            <View style={styles.stateWrap}>
+              <Text style={styles.stateTitle}>Detecting object...</Text>
+              <Text style={styles.stateSubtitle}>Hold steady for a moment.</Text>
+            </View>
+          ) : detectError ? (
+            <View style={styles.stateWrap}>
+              <Text style={styles.stateTitle}>Scan failed</Text>
+              <Text style={styles.stateSubtitle}>{detectError}</Text>
+            </View>
+          ) : result ? (
+            <>
+              {/* English word */}
+              <Text style={styles.englishWord}>{result.english}</Text>
 
-          {/* Target word row */}
-          <View style={styles.targetRow}>
-            {revealed ? (
-              <Text style={styles.targetWord}>{result.target}</Text>
-            ) : (
-              <TouchableOpacity
-                style={styles.revealButton}
-                onPress={() => setRevealed(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.revealText}>Tap to Reveal</Text>
-              </TouchableOpacity>
-            )}
+              {/* Target word row */}
+              <View style={styles.targetRow}>
+                {revealed ? (
+                  <Text style={styles.targetWord}>{result.target}</Text>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.revealButton}
+                    onPress={() => setRevealed(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.revealText}>Tap to Reveal</Text>
+                  </TouchableOpacity>
+                )}
 
-            {/* Speaker button */}
-            <TouchableOpacity
-              style={styles.speakerButton}
-              onPress={handleSpeak}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.speakerIcon}>🔊</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Check / Guess area */}
-          {guessMode ? (
-            <View style={styles.guessArea}>
-              <View style={styles.guessRow}>
-                <TextInput
-                  style={styles.guessInput}
-                  placeholder="Type the translation…"
-                  placeholderTextColor="rgba(62,48,36,0.4)"
-                  value={guess}
-                  onChangeText={(text) => {
-                    setGuess(text);
-                    setGuessResult(null);
-                  }}
-                  onSubmitEditing={handleCheckGuess}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                {/* Speaker button */}
                 <TouchableOpacity
-                  style={styles.submitGuess}
-                  onPress={handleCheckGuess}
+                  style={styles.speakerButton}
+                  onPress={handleSpeak}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.submitGuessText}>→</Text>
+                  <Text style={styles.speakerIcon}>🔊</Text>
                 </TouchableOpacity>
               </View>
-              {guessResult === 'correct' && (
-                <Text style={styles.guessCorrect}>✓ Correct!</Text>
+
+              {/* Check / Guess area */}
+              {guessMode ? (
+                <View style={styles.guessArea}>
+                  <View style={styles.guessRow}>
+                    <TextInput
+                      style={styles.guessInput}
+                      placeholder="Type the translation…"
+                      placeholderTextColor="rgba(62,48,36,0.4)"
+                      value={guess}
+                      onChangeText={(text) => {
+                        setGuess(text);
+                        setGuessResult(null);
+                      }}
+                      onSubmitEditing={handleCheckGuess}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      style={styles.submitGuess}
+                      onPress={handleCheckGuess}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.submitGuessText}>→</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {guessResult === 'correct' && (
+                    <Text style={styles.guessCorrect}>✓ Correct!</Text>
+                  )}
+                  {guessResult === 'incorrect' && (
+                    <Text style={styles.guessIncorrect}>✗ Try again</Text>
+                  )}
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.checkButton}
+                  onPress={() => setGuessMode(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.checkText}>Check</Text>
+                </TouchableOpacity>
               )}
-              {guessResult === 'incorrect' && (
-                <Text style={styles.guessIncorrect}>✗ Try again</Text>
-              )}
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.checkButton}
-              onPress={() => setGuessMode(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.checkText}>Check</Text>
-            </TouchableOpacity>
-          )}
+            </>
+          ) : null}
         </Animated.View>
       )}
 
@@ -572,6 +601,26 @@ const createStyles = () =>
       fontSize: 16,
       color: 'rgba(62,48,36,0.5)',
       fontWeight: '600',
+    },
+
+    stateWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+    },
+    stateTitle: {
+      fontSize: 22,
+      color: '#2C241C',
+      fontFamily: Fonts.rounded,
+      textAlign: 'center',
+    },
+    stateSubtitle: {
+      fontSize: 14,
+      color: 'rgba(62,48,36,0.72)',
+      fontFamily: Fonts.sans,
+      textAlign: 'center',
+      lineHeight: 20,
     },
 
     // Card content
