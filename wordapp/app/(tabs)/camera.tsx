@@ -340,7 +340,13 @@ export default function CameraScreen() {
               {/* Target word row */}
               <View style={styles.targetRow}>
                 {revealed ? (
-                  <Text style={styles.targetWord}>{result.target}</Text>
+                  <TouchableOpacity
+                    onPress={() => setRevealed(false)}
+                    activeOpacity={0.7}
+                    style={styles.revealedWordButton}
+                  >
+                    <Text style={styles.targetWord}>{result.target}</Text>
+                  </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
                     style={styles.revealButton}
@@ -639,6 +645,12 @@ const createStyles = () =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 12,
+    },
+    revealedWordButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
     },
     targetWord: {
       fontSize: 24,
