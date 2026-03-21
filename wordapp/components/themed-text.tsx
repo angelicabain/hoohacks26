@@ -52,13 +52,13 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '600',
     lineHeight: 40,
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.serif,
   },
   subtitle: {
     fontSize: 21,
     fontWeight: '500',
     lineHeight: 30,
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.serif,
   },
   link: {
     lineHeight: 30,

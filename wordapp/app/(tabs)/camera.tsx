@@ -58,7 +58,7 @@ export default function CameraScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- Scan loop: start/stop based on mode ---
@@ -110,7 +110,7 @@ export default function CameraScreen() {
         isProcessing.current = false;
       }
     }, 4000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [langCode]);
 
   const stopScanning = useCallback(() => {
@@ -160,7 +160,7 @@ export default function CameraScreen() {
       setMode('scanning');
       Keyboard.dismiss();
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
   const handleSpeak = useCallback(() => {
@@ -351,306 +351,320 @@ export default function CameraScreen() {
 
 const createStyles = () =>
   StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 16,
-  },
-  permTitle: {
-    fontSize: 22,
-    color: '#2C241C',
-    marginBottom: 4,
-    fontFamily: Fonts.rounded,
-  },
-  permText: {
-    fontSize: 14,
-    color: 'rgba(62,48,36,0.74)',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontFamily: Fonts.sans,
-  },
-  permButton: {
-    marginTop: 8,
-    backgroundColor: '#3A8F8A',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 30,
-  },
-  permButtonText: {
-    color: '#FFF9F3',
-    fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.2,
-    fontFamily: Fonts.rounded,
-  },
-  backLink: {
-    marginTop: 4,
-    padding: 8,
-  },
-  backLinkText: {
-    color: 'rgba(62,48,36,0.64)',
-    fontSize: 14,
-    fontFamily: Fonts.rounded,
-  },
+    container: {
+      flex: 1,
+      backgroundColor: '#000',
+    },
+    centered: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+      gap: 16,
+    },
+    permTitle: {
+      fontSize: 22,
+      color: '#2C241C',
+      marginBottom: 4,
+      fontFamily: Fonts.serif,
+    },
+    permText: {
+      fontSize: 14,
+      color: 'rgba(62,48,36,0.74)',
+      textAlign: 'center',
+      lineHeight: 22,
+      fontFamily: Fonts.sans,
+    },
+    permButton: {
+      marginTop: 8,
+      backgroundColor: '#D9772B',
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 30,
+    },
+    permButtonText: {
+      color: '#FFF9F3',
+      fontWeight: '700',
+      fontSize: 15,
+      letterSpacing: 0.2,
+      fontFamily: Fonts.sans,
+    },
+    backLink: {
+      marginTop: 4,
+      padding: 8,
+    },
+    backLinkText: {
+      color: 'rgba(62,48,36,0.64)',
+      fontSize: 14,
+      fontFamily: Fonts.sans,
+    },
 
-  safeArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-  },
+    safeArea: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+    },
 
-  // Top bar
-  topBar: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.86)',
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-  },
-  menuLine: {
-    width: 18,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: '#2C241C',
-  },
-  topCenter: {
-    alignItems: 'center',
-  },
-  topTitle: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    letterSpacing: 0.1,
-    fontFamily: Fonts.rounded,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  topLang: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
-    fontFamily: Fonts.rounded,
-    letterSpacing: 0.3,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  wordCounter: {
-    alignItems: 'center',
-    minWidth: 40,
-    backgroundColor: 'rgba(255,255,255,0.86)',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.24)',
-  },
-  wordCountText: {
-    fontSize: 18,
-    color: '#3A8F8A',
-    fontWeight: '700',
-    fontFamily: Fonts.rounded,
-  },
-  wordCountLabel: {
-    fontSize: 9,
-    color: 'rgba(62,48,36,0.6)',
-    fontFamily: Fonts.rounded,
-    letterSpacing: 0.3,
-  },
+    // Top bar
+    topBar: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+    },
+    menuButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.86)',
+      borderWidth: 1,
+      borderColor: 'rgba(217,119,43,0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 3,
+    },
+    menuLine: {
+      width: 18,
+      height: 2,
+      borderRadius: 1,
+      backgroundColor: '#2C241C',
+    },
+    topCenter: {
+      alignItems: 'center',
+    },
+    topTitle: {
+      fontSize: 24,
+      color: '#FFFFFF',
+      letterSpacing: 0.1,
+      fontFamily: Fonts.serif,
+    },
+    topLang: {
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.8)',
+      fontFamily: Fonts.rounded,
+      letterSpacing: 0.3,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+    },
+    wordCounter: {
+      alignItems: 'center',
+      minWidth: 40,
+      backgroundColor: 'rgba(255,255,255,0.86)',
+      borderRadius: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: 'rgba(58,143,138,0.24)',
+    },
+    wordCountText: {
+      fontSize: 18,
+      color: '#3A8F8A',
+      fontWeight: '700',
+      fontFamily: Fonts.rounded,
+    },
+    wordCountLabel: {
+      fontSize: 9,
+      color: 'rgba(62,48,36,0.6)',
+      fontFamily: Fonts.rounded,
+      letterSpacing: 0.3,
+    },
 
-  // Center area
-  centerArea: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  crosshairWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  crosshair: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(58,143,138,0.8)',
-    shadowColor: '#3A8F8A',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 6,
-  },
-  scanningText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
-    fontFamily: Fonts.rounded,
-    letterSpacing: 0.4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
+    // Center area
+    centerArea: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
+    },
+    crosshairWrapper: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    crosshair: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: 'rgba(217,119,43,0.78)',
+      shadowColor: '#D9772B',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.7,
+      shadowRadius: 6,
+    },
+    scanningText: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.7)',
+      fontFamily: Fonts.rounded,
+      letterSpacing: 0.4,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+    },
 
-  // Learning card
-  learningCard: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: CARD_HEIGHT,
-    backgroundColor: 'rgba(255,255,255,0.96)',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-    gap: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  dismissButton: {
-    position: 'absolute',
-    top: 16,
-    right: 20,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(62,48,36,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dismissText: {
-    fontSize: 16,
-    color: 'rgba(62,48,36,0.5)',
-    fontWeight: '600',
-  },
+    // Learning card
+    learningCard: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: CARD_HEIGHT,
+      backgroundColor: 'rgba(255,255,255,0.96)',
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 40,
+      gap: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 12,
+    },
+    dismissButton: {
+      position: 'absolute',
+      top: 16,
+      right: 20,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(62,48,36,0.08)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dismissText: {
+      fontSize: 16,
+      color: 'rgba(62,48,36,0.5)',
+      fontWeight: '600',
+    },
 
-  // Card content
-  englishWord: {
-    fontSize: 28,
-    color: '#2C241C',
-    fontWeight: '700',
-    fontFamily: Fonts.rounded,
-    textAlign: 'center',
-  },
-  targetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  targetWord: {
-    fontSize: 24,
-    color: '#3A8F8A',
-    fontWeight: '600',
-    fontFamily: Fonts.rounded,
-  },
-  revealButton: {
-    backgroundColor: 'rgba(58,143,138,0.1)',
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.2)',
-  },
-  revealText: {
-    fontSize: 15,
-    color: '#3A8F8A',
-    fontFamily: Fonts.rounded,
-    letterSpacing: 0.2,
-  },
-  speakerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(58,143,138,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  speakerIcon: {
-    fontSize: 20,
-  },
-  checkButton: {
-    backgroundColor: '#3A8F8A',
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 22,
-  },
-  checkText: {
-    color: '#FFF9F3',
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: Fonts.rounded,
-    letterSpacing: 0.2,
-  },
+    // Card content
+    englishWord: {
+      fontSize: 28,
+      color: '#2C241C',
+      fontWeight: '700',
+      fontFamily: Fonts.rounded,
+      textAlign: 'center',
+    },
+    targetRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+    },
+    targetWord: {
+      fontSize: 24,
+      color: '#3A8F8A',
+      fontWeight: '600',
+      fontFamily: Fonts.rounded,
+    },
+    revealButton: {
+      backgroundColor: 'rgba(58,143,138,0.1)',
+      paddingHorizontal: 22,
+      paddingVertical: 10,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: 'rgba(58,143,138,0.2)',
+    },
+    revealText: {
+      fontSize: 15,
+      color: '#3A8F8A',
+      fontFamily: Fonts.rounded,
+      letterSpacing: 0.2,
+    },
+    speakerButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(58,143,138,0.1)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    speakerIcon: {
+      fontSize: 20,
+    },
+    checkButton: {
+      backgroundColor: '#3A8F8A',
+      paddingHorizontal: 28,
+      paddingVertical: 12,
+      borderRadius: 22,
+    },
+    checkText: {
+      color: '#FFF9F3',
+      fontSize: 15,
+      fontWeight: '600',
+      fontFamily: Fonts.rounded,
+      letterSpacing: 0.2,
+    },
 
-  // Guess area
-  guessArea: {
-    width: '100%',
-    gap: 10,
-    alignItems: 'center',
-  },
-  guessRow: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 10,
-    alignItems: 'center',
-  },
-  guessInput: {
-    flex: 1,
-    height: 44,
-    borderWidth: 1,
-    borderColor: 'rgba(58,143,138,0.24)',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#2C241C',
-    fontFamily: Fonts.sans,
-    backgroundColor: '#FFFFFF',
-  },
-  submitGuess: {
-    backgroundColor: '#3A8F8A',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitGuessText: {
-    color: '#FFF9F3',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  guessCorrect: {
-    color: '#2D8F4E',
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: Fonts.rounded,
-  },
-  guessIncorrect: {
-    color: '#C44D3F',
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: Fonts.rounded,
-  },
-});
+    // Guess area
+    guessArea: {
+      width: '100%',
+      gap: 10,
+      alignItems: 'center',
+    },
+    guessRow: {
+      flexDirection: 'row',
+      width: '100%',
+      gap: 10,
+      alignItems: 'center',
+    },
+    guessInput: {
+      flex: 1,
+      height: 44,
+      borderWidth: 1,
+      borderColor: 'rgba(58,143,138,0.24)',
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      fontSize: 15,
+      color: '#2C241C',
+      fontFamily: Fonts.sans,
+      backgroundColor: '#FFFFFF',
+    },
+    submitGuess: {
+      backgroundColor: '#3A8F8A',
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    submitGuessText: {
+      color: '#FFF9F3',
+      fontSize: 18,
+      fontWeight: '600',
+    },
+    guessCorrect: {
+      color: '#2D8F4E',
+      fontSize: 15,
+      fontWeight: '600',
+      fontFamily: Fonts.rounded,
+    },
+    guessIncorrect: {
+      color: '#C44D3F',
+      fontSize: 15,
+      fontWeight: '600',
+      fontFamily: Fonts.rounded,
+    },
+
+    // Hint box (when no result)
+    hintBox: {
+      backgroundColor: 'rgba(255,255,255,0.88)',
+      borderWidth: 1,
+      borderColor: 'rgba(217,119,43,0.18)',
+      borderRadius: 20,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+    },
+    hintText: {
+      color: 'rgba(62,48,36,0.78)',
+      fontSize: 12,
+      letterSpacing: 0.2,
+      textAlign: 'center',
+      fontFamily: Fonts.sans,
+    },
+  });
