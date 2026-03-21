@@ -6,17 +6,28 @@ import {
   Dimensions,
   Animated,
   Easing,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fonts } from '@/constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
+const LANGUAGES = [
+  { code: 'es', locale: 'es-ES', label: 'Spanish', flag: '🇪🇸' },
+  { code: 'fr', locale: 'fr-FR', label: 'French', flag: '🇫🇷' },
+  { code: 'pt', locale: 'pt-BR', label: 'Portuguese', flag: '🇧🇷' },
+  { code: 'zh', locale: 'zh-CN', label: 'Mandarin', flag: '🇨🇳' },
+  { code: 'ja', locale: 'ja-JP', label: 'Japanese', flag: '🇯🇵' },
+  { code: 'ko', locale: 'ko-KR', label: 'Korean', flag: '🇰🇷' },
+];
+
 export default function HomeScreen() {
   const router = useRouter();
   const styles = createStyles();
+  const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
 
   // Animation refs
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -182,7 +193,14 @@ export default function HomeScreen() {
   }, []);
 
   const handleLaunch = () => {
-    router.push('/camera' as any);
+    router.push({
+      pathname: '/camera' as any,
+      params: {
+        langCode: selectedLang.code,
+        langLocale: selectedLang.locale,
+        langLabel: selectedLang.label,
+      },
+    });
   };
 
   const glowOpacity = glowAnim.interpolate({
@@ -267,6 +285,38 @@ export default function HomeScreen() {
         >
           <Text style={styles.logoText}>Fluency</Text>
           <Text style={styles.logoAccent}>Translate the world around you.</Text>
+        </Animated.View>
+
+        {/* Language selector */}
+        <Animated.View style={[styles.langSection, { opacity: fadeIn }]}>
+          <Text style={styles.langSectionLabel}>Choose your language</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.langScroll}
+          >
+            {LANGUAGES.map((lang) => (
+              <TouchableOpacity
+                key={lang.code}
+                style={[
+                  styles.langPill,
+                  selectedLang.code === lang.code && styles.langPillSelected,
+                ]}
+                onPress={() => setSelectedLang(lang)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.langFlag}>{lang.flag}</Text>
+                <Text
+                  style={[
+                    styles.langLabel,
+                    selectedLang.code === lang.code && styles.langLabelSelected,
+                  ]}
+                >
+                  {lang.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </Animated.View>
 
         {/* Middle launch button */}
@@ -454,6 +504,52 @@ const createStyles = () =>
     textShadowColor: 'rgba(217, 119, 43, 0.14)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 4,
+  },
+
+  // Language selector
+  langSection: {
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    marginTop: 8,
+  },
+  langSectionLabel: {
+    fontSize: 13,
+    color: 'rgba(62,48,36,0.6)',
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.3,
+  },
+  langScroll: {
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,43,0.2)',
+    backgroundColor: '#FFFFFF',
+  },
+  langPillSelected: {
+    backgroundColor: 'rgba(217,119,43,0.1)',
+    borderColor: '#D9772B',
+  },
+  langFlag: {
+    fontSize: 18,
+  },
+  langLabel: {
+    fontSize: 13,
+    color: 'rgba(62,48,36,0.7)',
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.2,
+  },
+  langLabelSelected: {
+    color: '#D9772B',
+    fontWeight: '600',
   },
   // Button zone
   buttonZone: {

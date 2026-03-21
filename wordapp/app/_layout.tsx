@@ -28,6 +28,9 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="quiz" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="about" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="howto" options={{ headerShown: false, animation: 'fade' }} />
       </Stack>
       <StatusBar style="dark" />
     </ThemeProvider>
