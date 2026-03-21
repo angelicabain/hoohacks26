@@ -47,7 +47,7 @@ type Phase = 'recall' | 'recall-summary' | 'sentences' | 'grading' | 'final';
 const OCTOPUS = {
   smiling: require('@/assets/images/smiling.png'),
   happy: require('@/assets/images/happy.png'),
-  upset: require('@/assets/images/reallyupset.jpeg'),
+  upset: require('@/assets/images/frown.png'),
   thinking: require('@/assets/images/thinking.png'),
 };
 
