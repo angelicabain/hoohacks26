@@ -57,6 +57,7 @@ export default function CameraScreen() {
   const cardSlide = useRef(new Animated.Value(CARD_HEIGHT)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const keyboardLift = useRef(new Animated.Value(0)).current;
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     Animated.timing(cornerFade, {
@@ -66,6 +67,15 @@ export default function CameraScreen() {
       useNativeDriver: true,
     }).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+    };
   }, []);
 
   // Lift the learning card above the keyboard when typing.
@@ -177,6 +187,11 @@ export default function CameraScreen() {
 
   // --- Dismiss card: add word, animate out, resume scanning ---
   const handleDismiss = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+
     // Add to seen words
     if (result) {
       setSeenWords((prev) => {
@@ -223,11 +238,23 @@ export default function CameraScreen() {
 
   const handleCheckGuess = useCallback(() => {
     if (!result) return;
+
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+
     const isCorrect =
       guess.toLowerCase().trim() === result.target.toLowerCase().trim();
     setGuessResult(isCorrect ? 'correct' : 'incorrect');
     Keyboard.dismiss();
-  }, [guess, result]);
+
+    if (isCorrect) {
+      autoCloseTimerRef.current = setTimeout(() => {
+        handleDismiss();
+      }, 650);
+    }
+  }, [guess, result, handleDismiss]);
 
   // --- Permission not yet determined ---
   if (!permission) {
