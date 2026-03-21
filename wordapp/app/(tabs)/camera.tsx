@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
+import { useAudioPlayer } from 'expo-audio';
 import { Fonts } from '@/constants/theme';
 import { detectObject, type DetectResult } from '@/services/api';
 import HamburgerMenu from '@/components/hamburger-menu';
@@ -65,6 +66,12 @@ export default function CameraScreen() {
   const keyboardLift = useRef(new Animated.Value(0)).current;
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const octopusBob = useRef(new Animated.Value(0)).current;
+  const correctAnswerPlayer = useAudioPlayer(
+    require('../../assets/sounds/ui-button-load-more-roy-s-noise-2-2-00-01.mp3')
+  );
+  const wrongAnswerPlayer = useAudioPlayer(
+    require('../../assets/sounds/844147__mihacappy__sfx_wrong_generic.wav')
+  );
 
   useEffect(() => {
     Animated.timing(cornerFade, {
@@ -290,11 +297,29 @@ export default function CameraScreen() {
     Keyboard.dismiss();
 
     if (isCorrect) {
+      void (async () => {
+        try {
+          await correctAnswerPlayer.seekTo(0);
+          correctAnswerPlayer.play();
+        } catch {
+          // Ignore sound errors to avoid blocking answer flow.
+        }
+      })();
+
       autoCloseTimerRef.current = setTimeout(() => {
         handleDismiss();
       }, 650);
+    } else {
+      void (async () => {
+        try {
+          await wrongAnswerPlayer.seekTo(0);
+          wrongAnswerPlayer.play();
+        } catch {
+          // Ignore sound errors to avoid blocking answer flow.
+        }
+      })();
     }
-  }, [guess, result, handleDismiss]);
+  }, [guess, result, handleDismiss, correctAnswerPlayer, wrongAnswerPlayer]);
 
   const handleStartQuiz = useCallback(() => {
     setShowQuizPrompt(false);
