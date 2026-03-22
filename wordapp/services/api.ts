@@ -17,8 +17,19 @@ export async function detectObject(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Detection failed: ${error}`);
+    const raw = await response.text();
+    let detail = raw;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.detail === 'string') {
+        detail = parsed.detail;
+      }
+    } catch {
+      // Keep raw response text if it's not JSON.
+    }
+
+    throw new Error(`Detection failed (${response.status}): ${detail}`);
   }
 
   return response.json();

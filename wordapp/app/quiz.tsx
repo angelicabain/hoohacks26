@@ -16,8 +16,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { useAudioPlayer } from 'expo-audio';
-import { Audio } from 'expo-av';
+import {
+  useAudioPlayer,
+  useAudioRecorder,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import { Fonts } from '@/constants/theme';
 import {
   type DetectResult,
@@ -96,7 +101,7 @@ export default function QuizScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [voiceProcessing, setVoiceProcessing] = useState(false);
   const [voiceResult, setVoiceResult] = useState<TranscribeResult | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const voiceRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animations
@@ -185,19 +190,15 @@ export default function QuizScreen() {
       recordingTimerRef.current = null;
     }
 
-    const recording = recordingRef.current;
-    if (!recording) return null;
-
     setIsRecording(false);
-    recordingRef.current = null;
 
     try {
-      await recording.stopAndUnloadAsync();
-      return recording.getURI();
+      await voiceRecorder.stop();
+      return voiceRecorder.uri;
     } catch {
       return null;
     }
-  }, []);
+  }, [voiceRecorder, isRecording]);
 
   const startRecording = useCallback(async () => {
     if (isRecording) {
@@ -224,18 +225,16 @@ export default function QuizScreen() {
     // Start recording
     setVoiceResult(null);
     try {
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) return;
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      recordingRef.current = recording;
+      await voiceRecorder.prepareToRecordAsync();
+      voiceRecorder.record();
       setIsRecording(true);
 
       // Auto-stop after 10 seconds
@@ -260,19 +259,26 @@ export default function QuizScreen() {
     } catch {
       setIsRecording(false);
     }
-  }, [isRecording, stopRecording, sentences, sentenceIndex, effectiveLangCode]);
+  }, [
+    isRecording,
+    stopRecording,
+    sentences,
+    sentenceIndex,
+    effectiveLangCode,
+    voiceRecorder,
+  ]);
 
   // Clean up recording on unmount
   useEffect(() => {
     return () => {
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => { });
-      }
+      try {
+        voiceRecorder.stop().catch(() => {});
+      } catch {}
       if (recordingTimerRef.current) {
         clearTimeout(recordingTimerRef.current);
       }
     };
-  }, []);
+  }, [voiceRecorder]);
 
   // --- Phase 1: Recall ---
   const handleRecallSubmit = useCallback(() => {

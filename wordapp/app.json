@@ -4,7 +4,7 @@
     "slug": "fluency",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/a.png",
     "scheme": "fluency",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

@@ -18,9 +18,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
-import { useAudioPlayer } from 'expo-audio';
+import {
+  useAudioPlayer,
+  useAudioRecorder,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import { Fonts } from '@/constants/theme';
-import { Audio } from 'expo-av';
 import { detectObject, type DetectResult, transcribeAudio, type TranscribeResult } from '@/services/api';
 import HamburgerMenu from '@/components/hamburger-menu';
 import { useWords } from '@/contexts/WordsContext';
@@ -68,7 +73,7 @@ export default function CameraScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [voiceProcessing, setVoiceProcessing] = useState(false);
   const [voiceResult, setVoiceResult] = useState<TranscribeResult | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const voiceRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animations
@@ -235,8 +240,9 @@ export default function CameraScreen() {
             const detection = await detectObject(photo.base64, effectiveLangCode);
             setResult(detection);
             setDetectError(null);
-          } catch {
-            setDetectError('Could not detect object. Try scanning again.');
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Could not detect object. Try scanning again.';
+            setDetectError(message);
           } finally {
             setIsDetecting(false);
           }
@@ -322,17 +328,14 @@ export default function CameraScreen() {
       clearTimeout(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
-    const recording = recordingRef.current;
-    if (!recording) return null;
     setIsRecording(false);
-    recordingRef.current = null;
     try {
-      await recording.stopAndUnloadAsync();
-      return recording.getURI();
+      await voiceRecorder.stop();
+      return voiceRecorder.uri;
     } catch {
       return null;
     }
-  }, []);
+  }, [voiceRecorder, isRecording]);
 
   const processVoiceRecording = useCallback(async (uri: string) => {
     if (!result) return;
@@ -377,13 +380,11 @@ export default function CameraScreen() {
 
     setVoiceResult(null);
     try {
-      const perm = await Audio.requestPermissionsAsync();
+      const perm = await requestRecordingPermissionsAsync();
       if (!perm.granted) return;
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      recordingRef.current = recording;
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await voiceRecorder.prepareToRecordAsync();
+      voiceRecorder.record();
       setIsRecording(true);
 
       recordingTimerRef.current = setTimeout(async () => {
@@ -393,19 +394,19 @@ export default function CameraScreen() {
     } catch {
       setIsRecording(false);
     }
-  }, [isRecording, stopVoiceRecording, processVoiceRecording]);
+  }, [isRecording, stopVoiceRecording, processVoiceRecording, voiceRecorder]);
 
   // Clean up recording on unmount
   useEffect(() => {
     return () => {
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => { });
-      }
+      try {
+        voiceRecorder.stop().catch(() => {});
+      } catch {}
       if (recordingTimerRef.current) {
         clearTimeout(recordingTimerRef.current);
       }
     };
-  }, []);
+  }, [voiceRecorder]);
 
   const handleCheckGuess = useCallback(() => {
     if (!result) return;
