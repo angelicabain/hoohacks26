@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,16 +26,33 @@ export default function MyWordsScreen() {
     const tsvText = words.map((w) => `${w.english}\t${w.target}`).join('\n');
     await Clipboard.setStringAsync(tsvText);
     Alert.alert(
-      'Copied!',
-      'Open Quizlet \u2192 Create Set \u2192 Import \u2192 paste your words',
+      'Words copied to clipboard! ✅',
+      'To import into Quizlet:\n\n'
+        + '1. Open Quizlet and create a new set\n'
+        + '2. Tap the + Import button\n'
+        + '3. Paste from clipboard\n'
+        + '4. Set "Between term and definition" to Tab\n'
+        + '5. Set "Between rows" to New Line\n'
+        + '6. Tap Import',
       [
         {
           text: 'Open Quizlet',
-          onPress: () => Linking.openURL('https://quizlet.com/create-set'),
+          onPress: () => Linking.openURL('https://quizlet.com'),
         },
         { text: 'Done', style: 'cancel' },
       ],
     );
+  };
+
+  const handleShare = async () => {
+    if (words.length === 0) {
+      Alert.alert('No words yet', 'Learn some words with the camera first!');
+      return;
+    }
+    const text = words.map((w) => `${w.english} — ${w.target}`).join('\n');
+    await Share.share({
+      message: `My Fluency Words (${words.length})\n\n${text}`,
+    });
   };
 
   return (
@@ -75,16 +93,25 @@ export default function MyWordsScreen() {
         </ScrollView>
       )}
 
-      {/* Sticky export button */}
+      {/* Sticky export buttons */}
       {words.length > 0 && (
         <View style={styles.bottomBar}>
-          <TouchableOpacity
-            style={styles.exportBtn}
-            onPress={handleExport}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.exportBtnText}>Export to Quizlet</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.exportBtn}
+              onPress={handleExport}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.exportBtnText}>Export to Quizlet</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.shareBtn}
+              onPress={handleShare}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.shareBtnText}>Share Words</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </SafeAreaView>
@@ -183,7 +210,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(217,119,43,0.12)',
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   exportBtn: {
+    flex: 1,
     backgroundColor: '#D9772B',
     paddingVertical: 16,
     borderRadius: 24,
@@ -191,7 +223,23 @@ const styles = StyleSheet.create({
   },
   exportBtnText: {
     color: '#FFF9F3',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.2,
+  },
+  shareBtn: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderRadius: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#D9772B',
+  },
+  shareBtnText: {
+    color: '#D9772B',
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: Fonts.rounded,
     letterSpacing: 0.2,

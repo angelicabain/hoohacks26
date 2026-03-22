@@ -7,7 +7,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Fonts } from '@/constants/theme';
 
 const { height } = Dimensions.get('window');
@@ -33,9 +33,11 @@ export default function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) 
   const router = useRouter();
   const slideAnim = useRef(new Animated.Value(-PANEL_WIDTH)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+  const [rendered, setRendered] = useState(false);
 
   useEffect(() => {
     if (visible) {
+      setRendered(true);
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -48,7 +50,7 @@ export default function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) 
           useNativeDriver: true,
         }),
       ]).start();
-    } else {
+    } else if (rendered) {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: -PANEL_WIDTH,
@@ -60,11 +62,13 @@ export default function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) 
           duration: 200,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setRendered(false);
+      });
     }
   }, [visible]);
 
-  if (!visible) return null;
+  if (!rendered) return null;
 
   const handleNavigate = (route: string) => {
     onClose();
