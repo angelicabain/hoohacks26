@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
+import * as Haptics from 'expo-haptics';
 import { useAudioPlayer } from 'expo-audio';
 import { Fonts } from '@/constants/theme';
 import { Audio } from 'expo-av';
@@ -320,6 +321,7 @@ export default function CameraScreen() {
       setVoiceResult(res);
 
       if (res.score >= 7) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         void (async () => {
           try {
             await correctAnswerPlayer.seekTo(0);
@@ -330,6 +332,7 @@ export default function CameraScreen() {
           handleDismiss();
         }, 1500);
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         void (async () => {
           try {
             await wrongAnswerPlayer.seekTo(0);
@@ -397,6 +400,7 @@ export default function CameraScreen() {
     Keyboard.dismiss();
 
     if (isCorrect) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       void (async () => {
         try {
           await correctAnswerPlayer.seekTo(0);
@@ -410,6 +414,7 @@ export default function CameraScreen() {
         handleDismiss();
       }, 650);
     } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       void (async () => {
         try {
           await wrongAnswerPlayer.seekTo(0);

@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useAudioPlayer } from 'expo-audio';
 import { Audio } from 'expo-av';
 import { Fonts } from '@/constants/theme';
@@ -316,9 +317,11 @@ export default function QuizScreen() {
     setRecallResults((prev) => [...prev, matched]);
     if (matched) {
       setRecallScore((s) => s + 1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       playBounce();
       playCorrectSound();
     } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       playShake();
       playWrongSound();
     }
