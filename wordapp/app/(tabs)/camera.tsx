@@ -64,6 +64,10 @@ export default function CameraScreen() {
   const [guessResult, setGuessResult] = useState<'correct' | 'incorrect' | null>(null);
   const [seenWords, setSeenWords] = useState<DetectResult[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hasAttempted, setHasAttempted] = useState(false);
+  const [revealWarning, setRevealWarning] = useState(false);
+  const revealWarningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealShake = useRef(new Animated.Value(0)).current;
 
   // Quiz prompt state
   const [showQuizPrompt, setShowQuizPrompt] = useState(false);
@@ -107,6 +111,10 @@ export default function CameraScreen() {
       if (autoCloseTimerRef.current) {
         clearTimeout(autoCloseTimerRef.current);
         autoCloseTimerRef.current = null;
+      }
+      if (revealWarningTimer.current) {
+        clearTimeout(revealWarningTimer.current);
+        revealWarningTimer.current = null;
       }
     };
   }, []);
@@ -218,6 +226,12 @@ export default function CameraScreen() {
           setGuessResult(null);
           setVoiceResult(null);
           setShowQuizPrompt(false);
+          setHasAttempted(false);
+          setRevealWarning(false);
+          if (revealWarningTimer.current) {
+            clearTimeout(revealWarningTimer.current);
+            revealWarningTimer.current = null;
+          }
           setMode('learning');
 
           cardSlide.setValue(CARD_MAX_HEIGHT);
@@ -368,6 +382,7 @@ export default function CameraScreen() {
       setVoiceResult(null);
     }
     setVoiceProcessing(false);
+    setHasAttempted(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, effectiveLangCode, handleDismiss, correctAnswerPlayer, wrongAnswerPlayer]);
 
@@ -419,6 +434,7 @@ export default function CameraScreen() {
     const isCorrect =
       guess.toLowerCase().trim() === result.target.toLowerCase().trim();
     setGuessResult(isCorrect ? 'correct' : 'incorrect');
+    setHasAttempted(true);
     Keyboard.dismiss();
 
     if (isCorrect) {
@@ -607,13 +623,46 @@ export default function CameraScreen() {
                       <Text style={styles.targetWord}>{result.target}</Text>
                     </TouchableOpacity>
                   ) : (
-                    <TouchableOpacity
-                      style={styles.revealButton}
-                      onPress={() => setRevealed(true)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.revealText}>Tap to Reveal</Text>
-                    </TouchableOpacity>
+                    <Animated.View style={[
+                      { flex: 1, transform: [{ translateX: revealShake }] },
+                      revealWarning && styles.revealGlow,
+                    ]}>
+                      <TouchableOpacity
+                        style={[
+                          styles.revealButton,
+                          revealWarning && styles.revealButtonWarning,
+                        ]}
+                        onPress={() => {
+                          if (hasAttempted) {
+                            setRevealed(true);
+                          } else {
+                            setRevealWarning(true);
+                            revealShake.setValue(0);
+                            Animated.sequence([
+                              Animated.timing(revealShake, { toValue: 8, duration: 50, useNativeDriver: true }),
+                              Animated.timing(revealShake, { toValue: -8, duration: 50, useNativeDriver: true }),
+                              Animated.timing(revealShake, { toValue: 6, duration: 50, useNativeDriver: true }),
+                              Animated.timing(revealShake, { toValue: -6, duration: 50, useNativeDriver: true }),
+                              Animated.timing(revealShake, { toValue: 3, duration: 50, useNativeDriver: true }),
+                              Animated.timing(revealShake, { toValue: 0, duration: 50, useNativeDriver: true }),
+                            ]).start();
+                            if (revealWarningTimer.current) clearTimeout(revealWarningTimer.current);
+                            revealWarningTimer.current = setTimeout(() => {
+                              setRevealWarning(false);
+                              revealWarningTimer.current = null;
+                            }, 3000);
+                          }
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.revealText,
+                          revealWarning && styles.revealTextWarning,
+                        ]}>
+                          {revealWarning ? 'Try speaking or writing first!' : 'Tap to Reveal'}
+                        </Text>
+                      </TouchableOpacity>
+                    </Animated.View>
                   )}
 
                   <TouchableOpacity
@@ -1068,12 +1117,26 @@ const createStyles = () =>
       justifyContent: 'center',
       fontWeight: '800',
     },
+    revealButtonWarning: {
+      borderColor: 'rgba(196,77,63,0.6)',
+    },
+    revealGlow: {
+      shadowColor: '#C44D3F',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.5,
+      shadowRadius: 8,
+      elevation: 6,
+      borderRadius: 14,
+    },
     revealText: {
       fontSize: 15,
       color: '#D9772B',
       letterSpacing: 0.2,
       fontWeight: '600',
-
+    },
+    revealTextWarning: {
+      color: '#C44D3F',
+      fontSize: 12,
     },
     speakerButton: {
       width: 44,
