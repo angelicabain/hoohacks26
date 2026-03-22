@@ -14,6 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
@@ -36,6 +37,7 @@ const QUIZ_THRESHOLD = 5;
 
 export default function CameraScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { langCode, langLocale, langLabel } = useLocalSearchParams<{
     langCode?: string;
     langLocale?: string;
@@ -286,6 +288,38 @@ export default function CameraScreen() {
     return () => stopScanning();
   }, [permission?.granted, mode, showQuizPrompt, menuOpen, startScanning, stopScanning]);
 
+  // Reset to scanning when navigating away
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
+      stopScanning();
+      setResult(null);
+      setIsDetecting(false);
+      setDetectError(null);
+      setRevealed(false);
+      setGuessMode(false);
+      setGuess('');
+      setGuessResult(null);
+      setVoiceResult(null);
+      setShowQuizPrompt(false);
+      setHasAttempted(false);
+      setRevealWarning(false);
+      setMenuOpen(false);
+      setMode('scanning');
+      cardSlide.setValue(CARD_MAX_HEIGHT);
+      cardOpacity.setValue(0);
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+      if (revealWarningTimer.current) {
+        clearTimeout(revealWarningTimer.current);
+        revealWarningTimer.current = null;
+      }
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, stopScanning]);
+
   // --- Dismiss learning card ---
   const handleDismiss = useCallback(() => {
     if (autoCloseTimerRef.current) {
@@ -415,8 +449,8 @@ export default function CameraScreen() {
   useEffect(() => {
     return () => {
       try {
-        voiceRecorder.stop().catch(() => {});
-      } catch {}
+        voiceRecorder.stop().catch(() => { });
+      } catch { }
       if (recordingTimerRef.current) {
         clearTimeout(recordingTimerRef.current);
       }
@@ -1098,7 +1132,7 @@ const createStyles = () =>
       paddingVertical: 8,
       backgroundColor: 'rgba(217,119,43,0.1)',
       borderColor: 'rgba(217,119,43,0.2)',
-      borderWidth:1,
+      borderWidth: 1,
     },
     targetWord: {
       fontSize: 18,

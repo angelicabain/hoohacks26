@@ -88,6 +88,9 @@ export default function QuizScreen() {
   const [isCorrect, setIsCorrect] = useState(false);
   const [recallScore, setRecallScore] = useState(0);
   const [recallResults, setRecallResults] = useState<boolean[]>([]);
+  const [hintCount, setHintCount] = useState(0);
+  const [hintText, setHintText] = useState('');
+  const [recallHintsUsed, setRecallHintsUsed] = useState<number[]>([]);
 
   // Phase 2 state
   const [sentences, setSentences] = useState<SentenceResult[]>([]);
@@ -96,6 +99,9 @@ export default function QuizScreen() {
   const [sentenceLoading, setSentenceLoading] = useState(false);
   const [sentenceAttempts, setSentenceAttempts] = useState<string[]>([]);
   const [grades, setGrades] = useState<GradeResult[]>([]);
+  const [sentenceHintCount, setSentenceHintCount] = useState(0);
+  const [sentenceHintText, setSentenceHintText] = useState('');
+  const [sentenceHintsUsed, setSentenceHintsUsed] = useState<number[]>([]);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -272,13 +278,50 @@ export default function QuizScreen() {
   useEffect(() => {
     return () => {
       try {
-        voiceRecorder.stop().catch(() => {});
-      } catch {}
+        voiceRecorder.stop().catch(() => { });
+      } catch { }
       if (recordingTimerRef.current) {
         clearTimeout(recordingTimerRef.current);
       }
     };
   }, [voiceRecorder]);
+
+  // --- Hint handlers ---
+  const handleRecallHint = useCallback(() => {
+    const word = quizWords[currentIndex];
+    if (!word) return;
+    const target = word.target;
+    const next = hintCount + 1;
+    if (next > 3) {
+      // Show full answer
+      setHintText(target);
+      setGuess(target);
+      setHintCount(next);
+    } else {
+      const revealed = target.slice(0, next);
+      const hidden = target.slice(next).replace(/[^\s]/g, '_');
+      setHintText(revealed + hidden);
+      setHintCount(next);
+    }
+  }, [quizWords, currentIndex, hintCount]);
+
+  const handleSentenceHint = useCallback(() => {
+    const sentence = sentences[sentenceIndex];
+    if (!sentence) return;
+    const words = sentence.sentence_target.split(' ');
+    const next = sentenceHintCount + 1;
+    if (next > 3) {
+      setSentenceHintText(sentence.sentence_target);
+      setSentenceGuess(sentence.sentence_target);
+      setSentenceHintCount(next);
+    } else {
+      const parts = words.map((w, i) =>
+        i < next ? w : w.replace(/[^\s]/g, '_'),
+      );
+      setSentenceHintText(parts.join(' '));
+      setSentenceHintCount(next);
+    }
+  }, [sentences, sentenceIndex, sentenceHintCount]);
 
   // --- Phase 1: Recall ---
   const handleRecallSubmit = useCallback(() => {
@@ -290,11 +333,19 @@ export default function QuizScreen() {
     const dist = levenshtein(attempt, correct);
     const matched = dist <= 2;
 
+    const usedHints = hintCount > 0;
     setIsCorrect(matched);
     setShowFeedback(true);
     setRecallResults((prev) => [...prev, matched]);
-    if (matched) {
+    setRecallHintsUsed((prev) => [...prev, hintCount]);
+    const fullReveal = hintCount > 3;
+    if (matched && !usedHints) {
       setRecallScore((s) => s + 1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playBounce();
+      playCorrectSound();
+    } else if (matched && usedHints && !fullReveal) {
+      setRecallScore((s) => s + 0.5);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       playBounce();
       playCorrectSound();
@@ -309,13 +360,15 @@ export default function QuizScreen() {
     setTimeout(() => {
       setShowFeedback(false);
       setGuess('');
+      setHintCount(0);
+      setHintText('');
       if (currentIndex < quizWords.length - 1) {
         setCurrentIndex((i) => i + 1);
       } else {
         setPhase('recall-summary');
       }
     }, delay);
-  }, [showFeedback, guess, currentIndex, quizWords, playBounce, playShake, playCorrectSound, playWrongSound]);
+  }, [showFeedback, guess, currentIndex, quizWords, hintCount, playBounce, playShake, playCorrectSound, playWrongSound]);
 
   // --- Phase 2: Generate all sentences in one batch call ---
   const startSentencePhase = useCallback(async () => {
@@ -373,15 +426,18 @@ export default function QuizScreen() {
 
     const newAttempts = [...sentenceAttempts, attempt];
     setSentenceAttempts(newAttempts);
+    setSentenceHintsUsed((prev) => [...prev, sentenceHintCount]);
     setSentenceGuess('');
     setVoiceResult(null);
+    setSentenceHintCount(0);
+    setSentenceHintText('');
 
     if (sentenceIndex < sentences.length - 1) {
       setSentenceIndex((i) => i + 1);
     } else {
       batchGrade(newAttempts);
     }
-  }, [sentenceGuess, sentenceAttempts, sentenceIndex, sentences, batchGrade, playCorrectSound, playWrongSound]);
+  }, [sentenceGuess, sentenceAttempts, sentenceIndex, sentenceHintCount, sentences, batchGrade, playCorrectSound, playWrongSound]);
 
   // --- Octopus face logic ---
   const getRecallOctopus = () => {
@@ -468,6 +524,11 @@ export default function QuizScreen() {
             {/* English word */}
             <Text style={styles.wordDisplay}>{word.english}</Text>
 
+            {/* Hint text */}
+            {hintText !== '' && !showFeedback && (
+              <Text style={styles.hintDisplay}>{hintText}</Text>
+            )}
+
             {/* Feedback or input */}
             {showFeedback ? (
               <View style={styles.feedbackArea}>
@@ -492,6 +553,13 @@ export default function QuizScreen() {
                     autoCorrect={false}
                     autoFocus
                   />
+                  <TouchableOpacity
+                    style={styles.hintInlineBtn}
+                    onPress={handleRecallHint}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.hintInlineBtnText}>💡</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={handleRecallSubmit}
@@ -526,6 +594,8 @@ export default function QuizScreen() {
           <Text style={styles.summaryTitle}>Quick Recall Complete!</Text>
           <Text style={styles.summaryScore}>
             {recallScore}/{quizWords.length} correct
+            {recallHintsUsed.filter((h) => h > 0).length > 0 &&
+              ` (${recallHintsUsed.filter((h) => h > 0).length} with hints)`}
           </Text>
 
           {/* Word-by-word breakdown */}
@@ -533,7 +603,9 @@ export default function QuizScreen() {
             {quizWords.map((w, i) => (
               <View key={i} style={styles.breakdownRow}>
                 <Text style={styles.breakdownIcon}>
-                  {recallResults[i] ? '✓' : '✗'}
+                  {recallResults[i]
+                    ? recallHintsUsed[i] > 3 ? '✗' : recallHintsUsed[i] > 0 ? '½' : '✓'
+                    : '✗'}
                 </Text>
                 <Text style={styles.breakdownWord}>{w.english}</Text>
                 <Text style={styles.breakdownTarget}>{w.target}</Text>
@@ -618,11 +690,23 @@ export default function QuizScreen() {
             {/* Progress */}
             <Text style={styles.progress}>{sentenceIndex + 1}/{sentences.length} sentences</Text>
 
-            {/* English sentence */}
+            {/* English sentence + hint button */}
             <View style={styles.sentenceCard}>
               <Text style={styles.sentenceLabel}>Translate to {effectiveLangLabel}:</Text>
               <Text style={styles.sentenceEnglish}>{currentSentence.sentence_english}</Text>
+              <TouchableOpacity
+                style={styles.hintCardBtn}
+                onPress={handleSentenceHint}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.hintCardBtnText}>💡</Text>
+              </TouchableOpacity>
             </View>
+
+            {/* Hint text */}
+            {sentenceHintText !== '' && (
+              <Text style={styles.hintDisplay}>{sentenceHintText}</Text>
+            )}
 
             {/* Input */}
             <View style={styles.inputArea}>
@@ -826,7 +910,7 @@ const styles = StyleSheet.create({
   // Octopus + bubble
   octopusSection: {
     alignItems: 'center',
-    gap: 4,
+    gap: 17,
   },
   octopusLarge: {
     width: 120,
@@ -932,6 +1016,52 @@ const styles = StyleSheet.create({
     color: '#FFF9F3',
     fontSize: 20,
     fontWeight: '600',
+  },
+
+  // Hints
+  hintInlineBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(217,119,43,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,43,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintInlineBtnText: {
+    fontSize: 20,
+  },
+  hintCardBtn: {
+    position: 'absolute',
+    right: 13,
+    top: 12.5,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(217,119,43,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,43,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  hintCardBtnText: {
+    fontSize: 20,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  hintDisplay: {
+    fontSize: 18,
+    color: 'rgba(62,48,36,0.6)',
+    fontFamily: Fonts.mono,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
 
   // Feedback
