@@ -10,6 +10,7 @@ import {
   Animated,
   Easing,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -102,7 +103,6 @@ export default function QuizScreen() {
   const octopusBob = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(1)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
-  const keyboardLift = useRef(new Animated.Value(0)).current;
   const correctAnswerPlayer = useAudioPlayer(
     require('@/assets/sounds/ui-button-load-more-roy-s-noise-2-2-00-01.mp3')
   );
@@ -155,34 +155,6 @@ export default function QuizScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keyboard lift
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (event) => {
-      Animated.timing(keyboardLift, {
-        toValue: Math.max(0, event.endCoordinates.height - 40),
-        duration: event.duration ?? 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    });
-
-    const hideSub = Keyboard.addListener(hideEvent, (event) => {
-      Animated.timing(keyboardLift, {
-        toValue: 0,
-        duration: event.duration ?? 200,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [keyboardLift]);
 
   const playBounce = useCallback(() => {
     bounceAnim.setValue(1);
@@ -449,74 +421,82 @@ export default function QuizScreen() {
     const word = quizWords[currentIndex];
     return (
       <SafeAreaView style={styles.container}>
-        <Animated.View style={[styles.quizContent, { transform: [{ translateY: Animated.multiply(keyboardLift, -1) }] }]}>
-          {/* Octopus + speech bubble */}
-          <View style={styles.octopusSection}>
-            <View style={styles.speechBubble}>
-              <Text style={styles.speechText}>
-                {showFeedback
-                  ? isCorrect
-                    ? 'Great job! 🎉'
-                    : `It's "${word.target}"`
-                  : `What's "${word.english}" in ${effectiveLangLabel}?`}
-              </Text>
-              <View style={styles.speechTriangle} />
-            </View>
-            <Animated.View style={{
-              transform: [
-                { translateY: octopusBob },
-                { scale: showFeedback && isCorrect ? bounceAnim : 1 },
-                { translateX: showFeedback && !isCorrect ? shakeAnim : 0 },
-              ],
-            }}>
-              <Image
-                source={getRecallOctopus()}
-                style={styles.octopusLarge}
-                resizeMode="contain"
-              />
-            </Animated.View>
-          </View>
-
-          {/* Progress */}
-          <Text style={styles.progress}>{currentIndex + 1}/{quizWords.length} words</Text>
-
-          {/* English word */}
-          <Text style={styles.wordDisplay}>{word.english}</Text>
-
-          {/* Feedback or input */}
-          {showFeedback ? (
-            <View style={styles.feedbackArea}>
-              {isCorrect ? (
-                <Text style={styles.correctFeedback}>✓ Correct!</Text>
-              ) : (
-                <Text style={styles.incorrectFeedback}>✗ {word.target}</Text>
-              )}
-            </View>
-          ) : (
-            <View style={styles.inputArea}>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.quizInput}
-                  placeholder="Type the translation…"
-                  placeholderTextColor="rgba(62,48,36,0.4)"
-                  value={guess}
-                  onChangeText={setGuess}
-                  onSubmitEditing={handleRecallSubmit}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoFocus
-                />
-                <TouchableOpacity
-                  style={styles.submitBtn}
-                  onPress={handleRecallSubmit}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.submitBtnText}>→</Text>
-                </TouchableOpacity>
+        <KeyboardAvoidingView
+          style={styles.flexOne}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
+            contentContainerStyle={styles.quizContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Octopus + speech bubble */}
+            <View style={styles.octopusSection}>
+              <View style={styles.speechBubble}>
+                <Text style={styles.speechText}>
+                  {showFeedback
+                    ? isCorrect
+                      ? 'Great job! 🎉'
+                      : `It's "${word.target}"`
+                    : `What's "${word.english}" in ${effectiveLangLabel}?`}
+                </Text>
+                <View style={styles.speechTriangle} />
               </View>
+              <Animated.View style={{
+                transform: [
+                  { translateY: octopusBob },
+                  { scale: showFeedback && isCorrect ? bounceAnim : 1 },
+                  { translateX: showFeedback && !isCorrect ? shakeAnim : 0 },
+                ],
+              }}>
+                <Image
+                  source={getRecallOctopus()}
+                  style={styles.octopusLarge}
+                  resizeMode="contain"
+                />
+              </Animated.View>
             </View>
-          )}
-        </Animated.View>
+
+            {/* Progress */}
+            <Text style={styles.progress}>{currentIndex + 1}/{quizWords.length} words</Text>
+
+            {/* English word */}
+            <Text style={styles.wordDisplay}>{word.english}</Text>
+
+            {/* Feedback or input */}
+            {showFeedback ? (
+              <View style={styles.feedbackArea}>
+                {isCorrect ? (
+                  <Text style={styles.correctFeedback}>✓ Correct!</Text>
+                ) : (
+                  <Text style={styles.incorrectFeedback}>✗ {word.target}</Text>
+                )}
+              </View>
+            ) : (
+              <View style={styles.inputArea}>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.quizInput}
+                    placeholder="Type the translation…"
+                    placeholderTextColor="rgba(62,48,36,0.4)"
+                    value={guess}
+                    onChangeText={setGuess}
+                    onSubmitEditing={handleRecallSubmit}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.submitBtn}
+                    onPress={handleRecallSubmit}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.submitBtnText}>→</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
@@ -605,7 +585,14 @@ export default function QuizScreen() {
 
     return (
       <SafeAreaView style={styles.container}>
-        <Animated.View style={[styles.quizContent, { transform: [{ translateY: Animated.multiply(keyboardLift, -1) }] }]}>
+        <KeyboardAvoidingView
+          style={styles.flexOne}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
+            contentContainerStyle={styles.quizContent}
+            keyboardShouldPersistTaps="handled"
+          >
           {/* Octopus */}
           <View style={styles.octopusSection}>
             <View style={styles.speechBubble}>
@@ -695,7 +682,8 @@ export default function QuizScreen() {
               </View>
             )}
           </View>
-        </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
@@ -789,6 +777,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  flexOne: {
+    flex: 1,
+  },
 
   // Empty / loading states
   emptyState: {
@@ -818,7 +809,7 @@ const styles = StyleSheet.create({
 
   // Main quiz layout
   quizContent: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
