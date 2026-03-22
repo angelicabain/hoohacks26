@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAudioPlayer } from 'expo-audio';
 import { Audio } from 'expo-av';
 import { Fonts } from '@/constants/theme';
 import {
