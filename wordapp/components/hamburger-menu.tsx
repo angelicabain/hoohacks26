@@ -142,8 +142,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   panelContent: {
-  flex: 1,
-  justifyContent: 'space-between', // keeps top items at top, bottom items at bottom
+    flex: 1,
+    justifyContent: 'space-between', // keeps top items at top, bottom items at bottom
   },
   panel: {
     position: 'absolute',
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 56,
+    top: 3,
     right: 20,
     width: 32,
     height: 32,
