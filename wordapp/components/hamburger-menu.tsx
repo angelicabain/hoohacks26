@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   panelTitle: {
     fontSize: 28,
     color: '#2C241C',
-    fontFamily: Fonts.rounded,
+    fontFamily: Fonts.serif,
     marginBottom: 32,
   },
   menuList: {
