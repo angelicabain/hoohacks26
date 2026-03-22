@@ -1,6 +1,4 @@
-// Change this to your machine's local IP when running on a physical device
-// e.g. 'http://192.168.1.42:8000'
-export const API_URL = 'http://10.142.35.165:8000';
+import { API_URL } from '@/constants/config';
 
 export interface DetectResult {
   english: string;

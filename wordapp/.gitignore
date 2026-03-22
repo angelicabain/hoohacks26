@@ -35,6 +35,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# per-developer config (IP address etc.)
+constants/config.ts
+
 # typescript
 *.tsbuildinfo
 
