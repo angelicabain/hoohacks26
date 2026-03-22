@@ -91,10 +91,6 @@ export default function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) 
       >
         <View style={styles.panelContent}>
           <View>
-            {/* Close button */}
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeText}>✕</Text>
-            </TouchableOpacity>
 
             {/* App title */}
             <Text style={styles.panelTitle}>Fluency</Text>
@@ -159,15 +155,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 3,
-    right: 20,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   closeText: {
     fontSize: 18,
