@@ -18,8 +18,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
 import { useAudioPlayer } from 'expo-audio';
 import { Fonts } from '@/constants/theme';
-import { detectObject, type DetectResult } from '@/services/api';
+import { Audio } from 'expo-av';
+import { detectObject, type DetectResult, transcribeAudio, type TranscribeResult } from '@/services/api';
 import HamburgerMenu from '@/components/hamburger-menu';
+import { useWords } from '@/contexts/WordsContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_HEIGHT = SCREEN_HEIGHT * 0.4;
@@ -37,6 +39,7 @@ export default function CameraScreen() {
   const effectiveLangLabel = langLabel ?? 'Spanish';
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const { words: globalWords, addWord } = useWords();
   const styles = createStyles();
 
   // State machine: 'scanning' | 'learning'
@@ -58,6 +61,13 @@ export default function CameraScreen() {
   // Quiz prompt state
   const [showQuizPrompt, setShowQuizPrompt] = useState(false);
   const [quizDismissedAt, setQuizDismissedAt] = useState(0);
+
+  // Voice pronunciation state
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceProcessing, setVoiceProcessing] = useState(false);
+  const [voiceResult, setVoiceResult] = useState<TranscribeResult | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animations
   const cornerFade = useRef(new Animated.Value(0)).current;
@@ -181,6 +191,7 @@ export default function CameraScreen() {
           setGuessMode(false);
           setGuess('');
           setGuessResult(null);
+          setVoiceResult(null);
           setShowQuizPrompt(false);
           setMode('learning');
 
@@ -240,8 +251,8 @@ export default function CameraScreen() {
       autoCloseTimerRef.current = null;
     }
 
-    // Add to seen words
     if (result) {
+      addWord(result);
       setSeenWords((prev) => {
         const exists = prev.some(
           (w) => w.english.toLowerCase() === result.english.toLowerCase()
@@ -282,6 +293,95 @@ export default function CameraScreen() {
       });
     }
   }, [result, effectiveLangLocale]);
+
+  // --- Voice pronunciation ---
+  const stopVoiceRecording = useCallback(async () => {
+    if (recordingTimerRef.current) {
+      clearTimeout(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    const recording = recordingRef.current;
+    if (!recording) return null;
+    setIsRecording(false);
+    recordingRef.current = null;
+    try {
+      await recording.stopAndUnloadAsync();
+      return recording.getURI();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const processVoiceRecording = useCallback(async (uri: string) => {
+    if (!result) return;
+    setVoiceProcessing(true);
+    try {
+      const res = await transcribeAudio(uri, effectiveLangCode, result.target);
+      setVoiceResult(res);
+
+      if (res.score >= 7) {
+        void (async () => {
+          try {
+            await correctAnswerPlayer.seekTo(0);
+            correctAnswerPlayer.play();
+          } catch {/* ignore */ }
+        })();
+        autoCloseTimerRef.current = setTimeout(() => {
+          handleDismiss();
+        }, 1500);
+      } else {
+        void (async () => {
+          try {
+            await wrongAnswerPlayer.seekTo(0);
+            wrongAnswerPlayer.play();
+          } catch {/* ignore */ }
+        })();
+      }
+    } catch {
+      setVoiceResult(null);
+    }
+    setVoiceProcessing(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, effectiveLangCode, handleDismiss, correctAnswerPlayer, wrongAnswerPlayer]);
+
+  const handleMicPress = useCallback(async () => {
+    if (isRecording) {
+      const uri = await stopVoiceRecording();
+      if (uri) processVoiceRecording(uri);
+      return;
+    }
+
+    setVoiceResult(null);
+    try {
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) return;
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      recordingRef.current = recording;
+      setIsRecording(true);
+
+      recordingTimerRef.current = setTimeout(async () => {
+        const uri = await stopVoiceRecording();
+        if (uri) processVoiceRecording(uri);
+      }, 5000);
+    } catch {
+      setIsRecording(false);
+    }
+  }, [isRecording, stopVoiceRecording, processVoiceRecording]);
+
+  // Clean up recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => { });
+      }
+      if (recordingTimerRef.current) {
+        clearTimeout(recordingTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleCheckGuess = useCallback(() => {
     if (!result) return;
@@ -471,7 +571,31 @@ export default function CameraScreen() {
                 </TouchableOpacity>
               </View>
 
-              {guessMode ? (
+              {/* Speak / Write action row */}
+              {!guessMode ? (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, isRecording && styles.actionButtonRecording]}
+                    onPress={handleMicPress}
+                    activeOpacity={0.7}
+                    disabled={voiceProcessing}
+                  >
+                    <Text style={styles.actionIcon}>{isRecording ? '⏹' : '🎤'}</Text>
+                    <Text style={[styles.actionLabel, isRecording && styles.actionLabelRecording]}>
+                      {isRecording ? 'Stop' : 'Speak'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => setGuessMode(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.actionIcon}>✏️</Text>
+                    <Text style={styles.actionLabel}>Write</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
                 <View style={styles.guessArea}>
                   <View style={styles.guessRow}>
                     <TextInput
@@ -486,6 +610,7 @@ export default function CameraScreen() {
                       onSubmitEditing={handleCheckGuess}
                       autoCapitalize="none"
                       autoCorrect={false}
+                      autoFocus
                     />
                     <TouchableOpacity
                       style={styles.submitGuess}
@@ -502,14 +627,31 @@ export default function CameraScreen() {
                     <Text style={styles.guessIncorrect}>✗ Try again</Text>
                   )}
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.checkButton}
-                  onPress={() => setGuessMode(true)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.checkText}>Check</Text>
-                </TouchableOpacity>
+              )}
+
+              {/* Recording / voice feedback */}
+              {isRecording && (
+                <View style={styles.voiceIndicator}>
+                  <View style={styles.voiceDot} />
+                  <Text style={styles.voiceIndicatorText}>Listening...</Text>
+                </View>
+              )}
+              {voiceProcessing && (
+                <Text style={styles.voiceProcessingText}>Processing...</Text>
+              )}
+              {voiceResult && !voiceProcessing && !isRecording && (
+                voiceResult.score >= 7 ? (
+                  <Text style={styles.voiceSuccessText}>
+                    {voiceResult.score >= 9 ? '🎤 Perfect!' : '🎤 Great job!'}
+                  </Text>
+                ) : (
+                  <View style={styles.voiceFailCard}>
+                    <Text style={styles.voiceFailHeard}>
+                      🎤 Heard: {voiceResult.heard} | Correct: {result?.target}
+                    </Text>
+                    <Text style={styles.voiceFailFeedback}>{voiceResult.feedback}</Text>
+                  </View>
+                )
               )}
             </>
           ) : null}
@@ -728,7 +870,7 @@ const createStyles = () =>
       paddingHorizontal: 24,
       paddingTop: 24,
       paddingBottom: 40,
-      gap: 16,
+      gap: 10,
       alignItems: 'center',
       justifyContent: 'center',
       shadowColor: '#000',
@@ -781,6 +923,7 @@ const createStyles = () =>
       fontWeight: '700',
       fontFamily: Fonts.serif,
       textAlign: 'center',
+      marginBottom: 4,
     },
     targetRow: {
       flexDirection: 'row',
@@ -826,8 +969,8 @@ const createStyles = () =>
       letterSpacing: 0.2,
     },
     speakerButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 14,
       backgroundColor: 'rgba(217,119,43,0.1)',
       borderWidth: 1,
@@ -838,24 +981,88 @@ const createStyles = () =>
     speakerIcon: {
       fontSize: 20,
     },
-    checkButton: {
+    actionRow: {
+      flexDirection: 'row',
       width: '86%',
-      alignSelf: 'center',
-      backgroundColor: '#D9772B',
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      borderRadius: 14,
+      gap: 12,
+      marginTop: 8,
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 16,
+      backgroundColor: 'rgba(217,119,43,0.08)',
+      borderWidth: 1,
+      borderColor: 'rgba(217,119,43,0.2)',
     },
-    checkText: {
-      color: '#FFF9F3',
+    actionButtonRecording: {
+      backgroundColor: 'rgba(196,77,63,0.1)',
+      borderColor: '#C44D3F',
+    },
+    actionIcon: {
+      fontSize: 20,
+    },
+    actionLabel: {
       fontSize: 15,
+      color: '#2C241C',
       fontWeight: '600',
-      fontFamily: Fonts.serif,
+      fontFamily: Fonts.rounded,
       letterSpacing: 0.2,
     },
-
+    actionLabelRecording: {
+      color: '#C44D3F',
+    },
+    voiceIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    voiceDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#C44D3F',
+    },
+    voiceIndicatorText: {
+      fontSize: 12,
+      color: '#C44D3F',
+      fontFamily: Fonts.rounded,
+    },
+    voiceProcessingText: {
+      fontSize: 12,
+      color: 'rgba(62,48,36,0.5)',
+      fontFamily: Fonts.rounded,
+    },
+    voiceSuccessText: {
+      fontSize: 15,
+      color: '#2D8F4E',
+      fontWeight: '700',
+      fontFamily: Fonts.rounded,
+      textAlign: 'center',
+    },
+    voiceFailCard: {
+      width: '86%',
+      gap: 4,
+      paddingHorizontal: 4,
+    },
+    voiceFailHeard: {
+      fontSize: 13,
+      color: 'rgba(62,48,36,0.75)',
+      fontFamily: Fonts.sans,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    voiceFailFeedback: {
+      fontSize: 12,
+      color: '#B65E1C',
+      fontFamily: Fonts.sans,
+      textAlign: 'center',
+      lineHeight: 16,
+    },
     // Guess area
     guessArea: {
       width: '100%',

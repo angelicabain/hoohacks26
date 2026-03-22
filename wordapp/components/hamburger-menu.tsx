@@ -21,6 +21,7 @@ interface HamburgerMenuProps {
 const TOP_MENU_ITEMS = [
   { label: 'Home', icon: '🏠', route: '/' },
   { label: 'Quiz Mode', icon: '✏️', route: '/quiz' },
+  { label: 'My Words', icon: '📋', route: '/my-words' },
 ] as const;
 
 const BOTTOM_MENU_ITEMS = [
@@ -71,6 +72,7 @@ export default function HamburgerMenu({ visible, onClose }: HamburgerMenuProps) 
       router.push(route as any);
     }, 220);
   };
+
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">

@@ -14,14 +14,16 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAudioPlayer } from 'expo-audio';
+import { Audio } from 'expo-av';
 import { Fonts } from '@/constants/theme';
 import {
   type DetectResult,
   type SentenceResult,
   type GradeResult,
+  type TranscribeResult,
   generateSentences,
   gradeSentences,
+  transcribeAudio,
 } from '@/services/api';
 
 // Levenshtein distance for fuzzy matching
@@ -84,6 +86,13 @@ export default function QuizScreen() {
   const [sentenceLoading, setSentenceLoading] = useState(false);
   const [sentenceAttempts, setSentenceAttempts] = useState<string[]>([]);
   const [grades, setGrades] = useState<GradeResult[]>([]);
+
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceProcessing, setVoiceProcessing] = useState(false);
+  const [voiceResult, setVoiceResult] = useState<TranscribeResult | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animations
   const octopusBob = useRef(new Animated.Value(0)).current;
@@ -193,6 +202,102 @@ export default function QuizScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // --- Voice recording ---
+  const stopRecording = useCallback(async () => {
+    if (recordingTimerRef.current) {
+      clearTimeout(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    const recording = recordingRef.current;
+    if (!recording) return null;
+
+    setIsRecording(false);
+    recordingRef.current = null;
+
+    try {
+      await recording.stopAndUnloadAsync();
+      return recording.getURI();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    if (isRecording) {
+      // Toggle off — stop and process
+      const uri = await stopRecording();
+      if (uri && sentences[sentenceIndex]) {
+        setVoiceProcessing(true);
+        try {
+          const result = await transcribeAudio(
+            uri,
+            effectiveLangCode,
+            sentences[sentenceIndex].sentence_target,
+          );
+          setVoiceResult(result);
+          setSentenceGuess(result.heard);
+        } catch {
+          setVoiceResult(null);
+        }
+        setVoiceProcessing(false);
+      }
+      return;
+    }
+
+    // Start recording
+    setVoiceResult(null);
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) return;
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      recordingRef.current = recording;
+      setIsRecording(true);
+
+      // Auto-stop after 10 seconds
+      recordingTimerRef.current = setTimeout(async () => {
+        const autoUri = await stopRecording();
+        if (autoUri && sentences[sentenceIndex]) {
+          setVoiceProcessing(true);
+          try {
+            const result = await transcribeAudio(
+              autoUri,
+              effectiveLangCode,
+              sentences[sentenceIndex].sentence_target,
+            );
+            setVoiceResult(result);
+            setSentenceGuess(result.heard);
+          } catch {
+            setVoiceResult(null);
+          }
+          setVoiceProcessing(false);
+        }
+      }, 10000);
+    } catch {
+      setIsRecording(false);
+    }
+  }, [isRecording, stopRecording, sentences, sentenceIndex, effectiveLangCode]);
+
+  // Clean up recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => { });
+      }
+      if (recordingTimerRef.current) {
+        clearTimeout(recordingTimerRef.current);
+      }
+    };
+  }, []);
+
   // --- Phase 1: Recall ---
   const handleRecallSubmit = useCallback(() => {
     if (showFeedback || !quizWords[currentIndex]) return;
@@ -285,6 +390,7 @@ export default function QuizScreen() {
     const newAttempts = [...sentenceAttempts, attempt];
     setSentenceAttempts(newAttempts);
     setSentenceGuess('');
+    setVoiceResult(null);
 
     if (sentenceIndex < sentences.length - 1) {
       setSentenceIndex((i) => i + 1);
@@ -490,7 +596,7 @@ export default function QuizScreen() {
           {/* Octopus */}
           <View style={styles.octopusSection}>
             <View style={styles.speechBubble}>
-              <Text style={styles.speechText}>Translate this sentence!</Text>
+              <Text style={styles.speechText}>Type or speak the translation!</Text>
               <View style={styles.speechTriangle} />
             </View>
             <Animated.View style={{ transform: [{ translateY: octopusBob }] }}>
@@ -516,22 +622,65 @@ export default function QuizScreen() {
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.quizInput}
-                placeholder="Type the sentence…"
+                placeholder="Type or speak the sentence…"
                 placeholderTextColor="rgba(62,48,36,0.4)"
                 value={sentenceGuess}
-                onChangeText={setSentenceGuess}
+                onChangeText={(text) => {
+                  setSentenceGuess(text);
+                  setVoiceResult(null);
+                }}
                 onSubmitEditing={handleSentenceSubmit}
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!voiceProcessing}
               />
+              <TouchableOpacity
+                style={[styles.micBtn, isRecording && styles.micBtnRecording]}
+                onPress={startRecording}
+                activeOpacity={0.7}
+                disabled={voiceProcessing}
+              >
+                <Text style={styles.micBtnText}>{isRecording ? '⏹' : '🎤'}</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.submitBtn}
                 onPress={handleSentenceSubmit}
                 activeOpacity={0.7}
+                disabled={voiceProcessing}
               >
                 <Text style={styles.submitBtnText}>→</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Recording indicator */}
+            {isRecording && (
+              <View style={styles.recordingIndicator}>
+                <View style={styles.recordingDot} />
+                <Text style={styles.recordingText}>Recording... tap mic to stop</Text>
+              </View>
+            )}
+
+            {/* Processing indicator */}
+            {voiceProcessing && (
+              <Text style={styles.processingText}>Processing speech...</Text>
+            )}
+
+            {/* Voice result feedback */}
+            {voiceResult && !voiceProcessing && (
+              <View style={styles.voiceResultCard}>
+                <Text style={styles.voiceHeardLabel}>AI heard:</Text>
+                <Text style={styles.voiceHeardText}>{voiceResult.heard}</Text>
+                <View style={styles.voiceScoreRow}>
+                  <Text style={[
+                    styles.voiceScore,
+                    { color: voiceResult.score >= 7 ? '#2D8F4E' : voiceResult.score >= 4 ? '#D9772B' : '#C44D3F' },
+                  ]}>
+                    {voiceResult.score}/10
+                  </Text>
+                  <Text style={styles.voiceFeedback}>{voiceResult.feedback}</Text>
+                </View>
+              </View>
+            )}
           </View>
         </Animated.View>
       </SafeAreaView>
@@ -608,6 +757,14 @@ export default function QuizScreen() {
           activeOpacity={0.8}
         >
           <Text style={styles.continueBtnText}>Back to Camera</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryBtn}
+          onPress={() => router.push('/my-words' as any)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.secondaryBtnText}>View My Words</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -911,6 +1068,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.rounded,
   },
+  secondaryBtn: {
+    backgroundColor: 'rgba(217,119,43,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,43,0.24)',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 24,
+  },
+  secondaryBtnText: {
+    color: '#D9772B',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.2,
+  },
 
   // Final summary
   finalScoreCards: {
@@ -938,5 +1110,85 @@ const styles = StyleSheet.create({
     color: '#D9772B',
     fontWeight: '800',
     fontFamily: Fonts.rounded,
+  },
+
+  // Voice recording
+  micBtn: {
+    backgroundColor: 'rgba(217,119,43,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,43,0.24)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micBtnRecording: {
+    backgroundColor: '#C44D3F',
+    borderColor: '#C44D3F',
+  },
+  micBtnText: {
+    fontSize: 22,
+  },
+  recordingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'center',
+  },
+  recordingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#C44D3F',
+  },
+  recordingText: {
+    fontSize: 13,
+    color: '#C44D3F',
+    fontFamily: Fonts.rounded,
+  },
+  processingText: {
+    fontSize: 13,
+    color: 'rgba(62,48,36,0.5)',
+    fontFamily: Fonts.rounded,
+    textAlign: 'center',
+  },
+  voiceResultCard: {
+    width: '100%',
+    backgroundColor: 'rgba(245,240,235,0.8)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  voiceHeardLabel: {
+    fontSize: 11,
+    color: 'rgba(62,48,36,0.5)',
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.3,
+  },
+  voiceHeardText: {
+    fontSize: 15,
+    color: '#2C241C',
+    fontFamily: Fonts.sans,
+    fontStyle: 'italic',
+  },
+  voiceScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+  },
+  voiceScore: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: Fonts.rounded,
+  },
+  voiceFeedback: {
+    flex: 1,
+    fontSize: 12,
+    color: 'rgba(62,48,36,0.65)',
+    fontFamily: Fonts.sans,
+    lineHeight: 16,
   },
 });

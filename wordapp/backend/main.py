@@ -1,6 +1,7 @@
 import os
 import json
-from fastapi import FastAPI, HTTPException
+import tempfile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
@@ -267,3 +268,99 @@ async def grade_sentences(request: GradeSentencesRequest):
         return GradeSentencesResponse(grades=items)
     except (KeyError, IndexError, json.JSONDecodeError, ValueError) as e:
         raise HTTPException(status_code=502, detail=f"Failed to parse Groq response: {e}")
+
+
+# ---------- /transcribe-audio ----------
+
+WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
+WHISPER_MODEL = "whisper-large-v3-turbo"
+
+
+@app.post("/transcribe-audio")
+async def transcribe_audio(
+    audio: UploadFile = File(...),
+    targetLanguage: str = Form(...),
+    expectedSentence: str = Form(...),
+):
+    if not GROQ_API_KEY:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+
+    lang_name = LANGUAGE_NAMES.get(targetLanguage, targetLanguage)
+
+    # Save uploaded file to a temp file so we can send it to Whisper
+    audio_bytes = await audio.read()
+    suffix = os.path.splitext(audio.filename or "audio.m4a")[1] or ".m4a"
+
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(audio_bytes)
+        tmp_path = tmp.name
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Step 1: Whisper transcription
+            with open(tmp_path, "rb") as f:
+                whisper_resp = await client.post(
+                    WHISPER_URL,
+                    headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+                    data={
+                        "model": WHISPER_MODEL,
+                        "language": targetLanguage,
+                    },
+                    files={"file": (audio.filename or "audio.m4a", f, audio.content_type or "audio/m4a")},
+                )
+
+            if whisper_resp.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Whisper API error: {whisper_resp.text}",
+                )
+
+            transcription = whisper_resp.json().get("text", "").strip()
+
+            if not transcription:
+                return {
+                    "score": 0,
+                    "feedback": "Could not hear anything. Try speaking louder and closer to the microphone.",
+                    "heard": "",
+                }
+
+            # Step 2: Grade pronunciation via Llama
+            prompt = (
+                f"The student tried to say: '{expectedSentence}' in {lang_name}. "
+                f"Whisper heard them say: '{transcription}'. "
+                f"Grade their pronunciation 1-10 and give specific, encouraging feedback "
+                f"about what they got right and what to improve. "
+                f'Respond in JSON only: {{"score": <number>, "feedback": "<string>", "heard": "<what whisper transcribed>"}}'
+            )
+
+            grade_resp = await client.post(
+                GROQ_URL,
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.5,
+                },
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            )
+
+            if grade_resp.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Groq grading error: {grade_resp.text}",
+                )
+
+            grade_data = grade_resp.json()
+            grade_text = grade_data["choices"][0]["message"]["content"]
+            parsed = json.loads(grade_text)
+
+            return {
+                "score": int(parsed.get("score", 0)),
+                "feedback": str(parsed.get("feedback", "")),
+                "heard": str(parsed.get("heard", transcription)),
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Transcription failed: {e}")
+    finally:
+        os.unlink(tmp_path)

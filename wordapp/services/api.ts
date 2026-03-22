@@ -51,6 +51,41 @@ export async function generateSentences(
   return data.sentences;
 }
 
+export interface TranscribeResult {
+  score: number;
+  feedback: string;
+  heard: string;
+}
+
+export async function transcribeAudio(
+  audioUri: string,
+  targetLanguage: string,
+  expectedSentence: string,
+): Promise<TranscribeResult> {
+  const formData = new FormData();
+
+  const filename = audioUri.split('/').pop() ?? 'audio.m4a';
+  formData.append('audio', {
+    uri: audioUri,
+    name: filename,
+    type: 'audio/m4a',
+  } as any);
+  formData.append('targetLanguage', targetLanguage);
+  formData.append('expectedSentence', expectedSentence);
+
+  const response = await fetch(`${API_URL}/transcribe-audio`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Transcription failed: ${error}`);
+  }
+
+  return response.json();
+}
+
 export interface GradeResult {
   score: number;
   feedback: string;
