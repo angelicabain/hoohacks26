@@ -11,6 +11,7 @@ import {
   Dimensions,
   Platform,
   Image,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -25,7 +26,7 @@ import HamburgerMenu from '@/components/hamburger-menu';
 import { useWords } from '@/contexts/WordsContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_HEIGHT = SCREEN_HEIGHT * 0.4;
+const CARD_MAX_HEIGHT = SCREEN_HEIGHT * 0.5;
 const QUIZ_THRESHOLD = 5;
 
 export default function CameraScreen() {
@@ -72,12 +73,12 @@ export default function CameraScreen() {
 
   // Animations
   const cornerFade = useRef(new Animated.Value(0)).current;
-  const cardSlide = useRef(new Animated.Value(CARD_HEIGHT)).current;
+  const cardSlide = useRef(new Animated.Value(CARD_MAX_HEIGHT)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const keyboardLift = useRef(new Animated.Value(0)).current;
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const octopusBob = useRef(new Animated.Value(0)).current;
-  const quizCardSlide = useRef(new Animated.Value(CARD_HEIGHT)).current;
+  const quizCardSlide = useRef(new Animated.Value(CARD_MAX_HEIGHT)).current;
   const quizCardOpacity = useRef(new Animated.Value(0)).current;
   const correctAnswerPlayer = useAudioPlayer(
     require('../../assets/sounds/ui-button-load-more-roy-s-noise-2-2-00-01.mp3')
@@ -138,7 +139,7 @@ export default function CameraScreen() {
       !showQuizPrompt
     ) {
       setShowQuizPrompt(true);
-      quizCardSlide.setValue(CARD_HEIGHT);
+      quizCardSlide.setValue(CARD_MAX_HEIGHT);
       quizCardOpacity.setValue(0);
       Animated.parallel([
         Animated.timing(quizCardSlide, {
@@ -214,7 +215,7 @@ export default function CameraScreen() {
           setShowQuizPrompt(false);
           setMode('learning');
 
-          cardSlide.setValue(CARD_HEIGHT);
+          cardSlide.setValue(CARD_MAX_HEIGHT);
           cardOpacity.setValue(0);
           Animated.parallel([
             Animated.timing(cardSlide, {
@@ -286,7 +287,7 @@ export default function CameraScreen() {
 
     Animated.parallel([
       Animated.timing(cardSlide, {
-        toValue: CARD_HEIGHT,
+        toValue: CARD_MAX_HEIGHT,
         duration: 280,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
@@ -463,7 +464,7 @@ export default function CameraScreen() {
   const handleDismissQuiz = useCallback(() => {
     Animated.parallel([
       Animated.timing(quizCardSlide, {
-        toValue: CARD_HEIGHT,
+        toValue: CARD_MAX_HEIGHT,
         duration: 280,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
@@ -573,132 +574,139 @@ export default function CameraScreen() {
             <Text style={styles.dismissText}>✕</Text>
           </TouchableOpacity>
 
-          {isDetecting ? (
-            <View style={styles.stateWrap}>
-              <Text style={styles.stateTitle}>Detecting object...</Text>
-              <Text style={styles.stateSubtitle}>Hold steady for a moment.</Text>
-            </View>
-          ) : detectError ? (
-            <View style={styles.stateWrap}>
-              <Text style={styles.stateTitle}>Scan failed</Text>
-              <Text style={styles.stateSubtitle}>{detectError}</Text>
-            </View>
-          ) : result ? (
-            <>
-              <Text style={styles.englishWord}>{result.english}</Text>
-
-              <View style={styles.targetRow}>
-                {revealed ? (
-                  <TouchableOpacity
-                    onPress={() => setRevealed(false)}
-                    activeOpacity={0.7}
-                    style={styles.revealedWordButton}
-                  >
-                    <Text style={styles.targetWord}>{result.target}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.revealButton}
-                    onPress={() => setRevealed(true)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.revealText}>Tap to Reveal</Text>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  style={styles.speakerButton}
-                  onPress={handleSpeak}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.speakerIcon}>🔊</Text>
-                </TouchableOpacity>
+          <ScrollView
+            contentContainerStyle={styles.cardScrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {isDetecting ? (
+              <View style={styles.stateWrap}>
+                <Text style={styles.stateTitle}>Detecting object...</Text>
+                <Text style={styles.stateSubtitle}>Hold steady for a moment.</Text>
               </View>
+            ) : detectError ? (
+              <View style={styles.stateWrap}>
+                <Text style={styles.stateTitle}>Scan failed</Text>
+                <Text style={styles.stateSubtitle}>{detectError}</Text>
+              </View>
+            ) : result ? (
+              <>
+                <Text style={styles.englishWord}>{result.english}</Text>
 
-              {/* Speak / Write action row */}
-              {!guessMode ? (
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, isRecording && styles.actionButtonRecording]}
-                    onPress={handleMicPress}
-                    activeOpacity={0.7}
-                    disabled={voiceProcessing}
-                  >
-                    <Text style={styles.actionIcon}>{isRecording ? '⏹' : '🎤'}</Text>
-                    <Text style={[styles.actionLabel, isRecording && styles.actionLabelRecording]}>
-                      {isRecording ? 'Stop' : 'Speak'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => setGuessMode(true)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.actionIcon}>✏️</Text>
-                    <Text style={styles.actionLabel}>Write</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.guessArea}>
-                  <View style={styles.guessRow}>
-                    <TextInput
-                      style={styles.guessInput}
-                      placeholder="Type the translation…"
-                      placeholderTextColor="rgba(62,48,36,0.4)"
-                      value={guess}
-                      onChangeText={(text) => {
-                        setGuess(text);
-                        setGuessResult(null);
-                      }}
-                      onSubmitEditing={handleCheckGuess}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoFocus
-                    />
+                <View style={styles.targetRow}>
+                  {revealed ? (
                     <TouchableOpacity
-                      style={styles.submitGuess}
-                      onPress={handleCheckGuess}
+                      onPress={() => setRevealed(false)}
+                      activeOpacity={0.7}
+                      style={styles.revealedWordButton}
+                    >
+                      <Text style={styles.targetWord}>{result.target}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.revealButton}
+                      onPress={() => setRevealed(true)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.submitGuessText}>→</Text>
+                      <Text style={styles.revealText}>Tap to Reveal</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.speakerButton}
+                    onPress={handleSpeak}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.speakerIcon}>🔊</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Speak / Write action row */}
+                {!guessMode ? (
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, isRecording && styles.actionButtonRecording]}
+                      onPress={handleMicPress}
+                      activeOpacity={0.7}
+                      disabled={voiceProcessing}
+                    >
+                      <Text style={styles.actionIcon}>{isRecording ? '⏹' : '🎤'}</Text>
+                      <Text style={[styles.actionLabel, isRecording && styles.actionLabelRecording]}>
+                        {isRecording ? 'Stop' : 'Speak'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => setGuessMode(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.actionIcon}>✏️</Text>
+                      <Text style={styles.actionLabel}>Write</Text>
                     </TouchableOpacity>
                   </View>
-                  {guessResult === 'correct' && (
-                    <Text style={styles.guessCorrect}>✓ Correct!</Text>
-                  )}
-                  {guessResult === 'incorrect' && (
-                    <Text style={styles.guessIncorrect}>✗ Try again</Text>
-                  )}
-                </View>
-              )}
-
-              {/* Recording / voice feedback */}
-              {isRecording && (
-                <View style={styles.voiceIndicator}>
-                  <View style={styles.voiceDot} />
-                  <Text style={styles.voiceIndicatorText}>Listening...</Text>
-                </View>
-              )}
-              {voiceProcessing && (
-                <Text style={styles.voiceProcessingText}>Processing...</Text>
-              )}
-              {voiceResult && !voiceProcessing && !isRecording && (
-                voiceResult.score >= 7 ? (
-                  <Text style={styles.voiceSuccessText}>
-                    {voiceResult.score >= 9 ? '🎤 Perfect!' : '🎤 Great job!'}
-                  </Text>
                 ) : (
-                  <View style={styles.voiceFailCard}>
-                    <Text style={styles.voiceFailHeard}>
-                      🎤 Heard: {voiceResult.heard} | Correct: {result?.target}
-                    </Text>
-                    <Text style={styles.voiceFailFeedback}>{voiceResult.feedback}</Text>
+                  <View style={styles.guessArea}>
+                    <View style={styles.guessRow}>
+                      <TextInput
+                        style={styles.guessInput}
+                        placeholder="Type the translation…"
+                        placeholderTextColor="rgba(62,48,36,0.4)"
+                        value={guess}
+                        onChangeText={(text) => {
+                          setGuess(text);
+                          setGuessResult(null);
+                        }}
+                        onSubmitEditing={handleCheckGuess}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        autoFocus
+                      />
+                      <TouchableOpacity
+                        style={styles.submitGuess}
+                        onPress={handleCheckGuess}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.submitGuessText}>→</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {guessResult === 'correct' && (
+                      <Text style={styles.guessCorrect}>✓ Correct!</Text>
+                    )}
+                    {guessResult === 'incorrect' && (
+                      <Text style={styles.guessIncorrect}>✗ Try again</Text>
+                    )}
                   </View>
-                )
-              )}
-            </>
-          ) : null}
+                )}
+
+                {/* Recording / voice feedback */}
+                {isRecording && (
+                  <View style={styles.voiceIndicator}>
+                    <View style={styles.voiceDot} />
+                    <Text style={styles.voiceIndicatorText}>Listening...</Text>
+                  </View>
+                )}
+                {voiceProcessing && (
+                  <Text style={styles.voiceProcessingText}>Processing...</Text>
+                )}
+                {voiceResult && !voiceProcessing && !isRecording && (
+                  voiceResult.score >= 7 ? (
+                    <Text style={styles.voiceSuccessText}>
+                      {voiceResult.score >= 9 ? '🎤 Perfect!' : '🎤 Great job!'}
+                    </Text>
+                  ) : (
+                    <View style={styles.voiceFailCard}>
+                      <Text style={styles.voiceFailHeard}>
+                        🎤 Heard: {voiceResult.heard} | Correct: {result?.target}
+                      </Text>
+                      <Text style={styles.voiceFailFeedback}>{voiceResult.feedback}</Text>
+                    </View>
+                  )
+                )}
+              </>
+            ) : null}
+          </ScrollView>
         </Animated.View>
       )}
 
@@ -908,21 +916,24 @@ const createStyles = () =>
       bottom: 0,
       left: 0,
       right: 0,
-      height: CARD_HEIGHT,
+      maxHeight: CARD_MAX_HEIGHT,
       backgroundColor: 'rgba(255,255,255,0.96)',
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
-      paddingHorizontal: 24,
       paddingTop: 24,
       paddingBottom: 40,
-      gap: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.12,
       shadowRadius: 16,
       elevation: 12,
+    },
+    cardScrollContent: {
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 8,
     },
     dismissButton: {
       position: 'absolute',
@@ -1182,7 +1193,7 @@ const createStyles = () =>
       bottom: 0,
       left: 0,
       right: 0,
-      height: CARD_HEIGHT,
+      height: CARD_MAX_HEIGHT,
       backgroundColor: 'rgba(255,255,255,0.96)',
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
