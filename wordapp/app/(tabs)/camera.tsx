@@ -643,7 +643,10 @@ export default function CameraScreen() {
 
                     <TouchableOpacity
                       style={styles.actionButton}
-                      onPress={() => setGuessMode(true)}
+                      onPress={() => {
+                        setGuessMode(true);
+                        setVoiceResult(null); // clears failed "heard" text when entering write mode
+                      }}
                       activeOpacity={0.7}
                     >
                       <Text style={styles.actionIcon}>✏️</Text>
@@ -653,6 +656,18 @@ export default function CameraScreen() {
                 ) : (
                   <View style={styles.guessArea}>
                     <View style={styles.guessRow}>
+                      <TouchableOpacity
+                        style={styles.backToActionsButton}
+                        onPress={() => {
+                          setGuessMode(false);
+                          setGuess('');
+                          setGuessResult(null);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.backToActionsText}>← </Text>
+                      </TouchableOpacity>
+
                       <TextInput
                         style={styles.guessInput}
                         placeholder="Type the translation…"
@@ -667,6 +682,7 @@ export default function CameraScreen() {
                         autoCorrect={false}
                         autoFocus
                       />
+
                       <TouchableOpacity
                         style={styles.submitGuess}
                         onPress={handleCheckGuess}
@@ -675,6 +691,7 @@ export default function CameraScreen() {
                         <Text style={styles.submitGuessText}>→</Text>
                       </TouchableOpacity>
                     </View>
+
                     {guessResult === 'correct' && (
                       <Text style={styles.guessCorrect}>✓ Correct!</Text>
                     )}
@@ -683,6 +700,7 @@ export default function CameraScreen() {
                     )}
                   </View>
                 )}
+
 
                 {/* Recording / voice feedback */}
                 {isRecording && (
@@ -694,7 +712,7 @@ export default function CameraScreen() {
                 {voiceProcessing && (
                   <Text style={styles.voiceProcessingText}>Processing...</Text>
                 )}
-                {voiceResult && !voiceProcessing && !isRecording && (
+                {voiceResult && !voiceProcessing && !isRecording && !guessMode && (
                   voiceResult.score >= 7 ? (
                     <Text style={styles.voiceSuccessText}>
                       {voiceResult.score >= 9 ? '🎤 Perfect!' : '🎤 Great job!'}
@@ -978,7 +996,33 @@ const createStyles = () =>
       textAlign: 'center',
       lineHeight: 20,
     },
-
+    backToActionsButton: {
+      //backgroundColor: 'rgba(62,48,36,0.76)',
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backToActionsText: {
+      fontFamily: Fonts.sans,
+      fontSize: 18,
+      color: '#3E3024',
+    },
+    //back to menu,
+    /*backToActionsButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 999,
+      backgroundColor: 'rgba(62,48,36,0.35)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backToActionsText: {
+      color: 'black',
+      fontSize: 18,
+      fontWeight: '600',
+    },*/
     // Card content
     englishWord: {
       fontSize: 28,
@@ -1003,6 +1047,9 @@ const createStyles = () =>
       borderRadius: 14,
       paddingHorizontal: 12,
       paddingVertical: 8,
+      backgroundColor: 'rgba(217,119,43,0.1)',
+      borderColor: 'rgba(217,119,43,0.2)',
+      borderWidth:1,
     },
     targetWord: {
       fontSize: 18,
