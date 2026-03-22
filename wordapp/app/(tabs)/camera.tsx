@@ -450,6 +450,7 @@ export default function CameraScreen() {
 
   const handleStartQuiz = useCallback(() => {
     setShowQuizPrompt(false);
+    setQuizDismissedAt(seenWords.length);
     stopScanning();
     router.push({
       pathname: '/quiz' as any,
