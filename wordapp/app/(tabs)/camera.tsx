@@ -76,6 +76,8 @@ export default function CameraScreen() {
   const keyboardLift = useRef(new Animated.Value(0)).current;
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const octopusBob = useRef(new Animated.Value(0)).current;
+  const quizCardSlide = useRef(new Animated.Value(CARD_HEIGHT)).current;
+  const quizCardOpacity = useRef(new Animated.Value(0)).current;
   const correctAnswerPlayer = useAudioPlayer(
     require('../../assets/sounds/ui-button-load-more-roy-s-noise-2-2-00-01.mp3')
   );
@@ -135,7 +137,23 @@ export default function CameraScreen() {
       !showQuizPrompt
     ) {
       setShowQuizPrompt(true);
+      quizCardSlide.setValue(CARD_HEIGHT);
+      quizCardOpacity.setValue(0);
+      Animated.parallel([
+        Animated.timing(quizCardSlide, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(quizCardOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seenWords.length, mode, quizDismissedAt, showQuizPrompt]);
 
   // Keyboard lift
@@ -238,11 +256,13 @@ export default function CameraScreen() {
   }, []);
 
   useEffect(() => {
-    if (permission?.granted && mode === 'scanning') {
+    if (permission?.granted && mode === 'scanning' && !showQuizPrompt && !menuOpen) {
       startScanning();
+    } else {
+      stopScanning();
     }
     return () => stopScanning();
-  }, [permission?.granted, mode, startScanning, stopScanning]);
+  }, [permission?.granted, mode, showQuizPrompt, menuOpen, startScanning, stopScanning]);
 
   // --- Dismiss learning card ---
   const handleDismiss = useCallback(() => {
@@ -436,8 +456,23 @@ export default function CameraScreen() {
   }, [seenWords, effectiveLangCode, effectiveLangLocale, effectiveLangLabel, router, stopScanning]);
 
   const handleDismissQuiz = useCallback(() => {
-    setShowQuizPrompt(false);
-    setQuizDismissedAt(seenWords.length);
+    Animated.parallel([
+      Animated.timing(quizCardSlide, {
+        toValue: CARD_HEIGHT,
+        duration: 280,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(quizCardOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowQuizPrompt(false);
+      setQuizDismissedAt(seenWords.length);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seenWords.length]);
 
   // --- Permission states ---
@@ -662,44 +697,45 @@ export default function CameraScreen() {
         </Animated.View>
       )}
 
-      {/* Quiz prompt — octopus peeking from bottom */}
+      {/* Quiz prompt card */}
       {showQuizPrompt && mode === 'scanning' && (
-        <View style={styles.quizPromptContainer}>
-          {/* Speech bubble */}
-          <View style={styles.speechBubble}>
-            <Text style={styles.speechText}>Ready to test your memory?</Text>
-            <View style={styles.speechTriangle} />
-          </View>
+        <Animated.View
+          style={[
+            styles.quizCard,
+            {
+              transform: [{ translateY: quizCardSlide }],
+              opacity: quizCardOpacity,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.dismissButton}
+            onPress={handleDismissQuiz}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dismissText}>✕</Text>
+          </TouchableOpacity>
 
-          <View style={styles.quizPromptRow}>
-            {/* Octopus */}
-            <Animated.View style={{ transform: [{ translateY: octopusBob }] }}>
-              <Image
-                source={require('@/assets/images/smiling.png')}
-                style={styles.octopusImage}
-                resizeMode="contain"
-              />
-            </Animated.View>
+          <Animated.View style={{ transform: [{ translateY: octopusBob }] }}>
+            <Image
+              source={require('@/assets/images/happy.png')}
+              style={styles.octopusImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
-            {/* Buttons */}
-            <View style={styles.quizPromptButtons}>
-              <TouchableOpacity
-                style={styles.startQuizButton}
-                onPress={handleStartQuiz}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.startQuizText}>Start Quiz</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.laterButton}
-                onPress={handleDismissQuiz}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.laterText}>Later</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          <Text style={styles.quizCardTitle}>
+            Great job! Ready to test your memory?
+          </Text>
+
+          <TouchableOpacity
+            style={styles.startQuizButton}
+            onPress={handleStartQuiz}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.startQuizText}>Start Quiz</Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
       <HamburgerMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
@@ -1135,80 +1171,50 @@ const createStyles = () =>
       fontFamily: Fonts.sans,
     },
 
-    // Quiz prompt
-    quizPromptContainer: {
+    // Quiz prompt card
+    quizCard: {
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
+      height: CARD_HEIGHT,
+      backgroundColor: 'rgba(255,255,255,0.96)',
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 40,
+      gap: 14,
       alignItems: 'center',
-      paddingBottom: 32,
-      paddingHorizontal: 20,
-    },
-    speechBubble: {
-      backgroundColor: 'rgba(255,255,255,0.95)',
-      borderRadius: 18,
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      marginBottom: 8,
+      justifyContent: 'center',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 12,
     },
-    speechText: {
-      fontSize: 15,
+    quizCardTitle: {
+      fontSize: 18,
       color: '#2C241C',
       fontFamily: Fonts.rounded,
       textAlign: 'center',
-    },
-    speechTriangle: {
-      position: 'absolute',
-      bottom: -8,
-      left: 40,
-      width: 0,
-      height: 0,
-      borderLeftWidth: 8,
-      borderRightWidth: 8,
-      borderTopWidth: 8,
-      borderLeftColor: 'transparent',
-      borderRightColor: 'transparent',
-      borderTopColor: 'rgba(255,255,255,0.95)',
-    },
-    quizPromptRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
-      gap: 16,
+      lineHeight: 24,
     },
     octopusImage: {
-      width: 120,
-      height: 120,
-    },
-    quizPromptButtons: {
-      gap: 8,
-      alignItems: 'center',
-      paddingBottom: 10,
+      width: 100,
+      height: 100,
     },
     startQuizButton: {
       backgroundColor: '#D9772B',
-      paddingHorizontal: 24,
-      paddingVertical: 12,
-      borderRadius: 22,
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 24,
     },
     startQuizText: {
       color: '#FFF9F3',
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: '700',
       fontFamily: Fonts.rounded,
       letterSpacing: 0.2,
-    },
-    laterButton: {
-      padding: 6,
-    },
-    laterText: {
-      color: 'rgba(255,255,255,0.7)',
-      fontSize: 13,
-      fontFamily: Fonts.rounded,
     },
   });
