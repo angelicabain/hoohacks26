@@ -475,6 +475,7 @@ export default function QuizScreen() {
               <View style={styles.inputArea}>
                 <View style={styles.inputRow}>
                   <TextInput
+                    key={`sentence-input-${sentenceIndex}`}
                     style={styles.quizInput}
                     placeholder="Type the translation…"
                     placeholderTextColor="rgba(62,48,36,0.4)"
@@ -593,95 +594,95 @@ export default function QuizScreen() {
             contentContainerStyle={styles.quizContent}
             keyboardShouldPersistTaps="handled"
           >
-          {/* Octopus */}
-          <View style={styles.octopusSection}>
-            <View style={styles.speechBubble}>
-              <Text style={styles.speechText}>Type or speak the translation!</Text>
-              <View style={styles.speechTriangle} />
-            </View>
-            <Animated.View style={{ transform: [{ translateY: octopusBob }] }}>
-              <Image
-                source={OCTOPUS.smiling}
-                style={styles.octopusLarge}
-                resizeMode="contain"
-              />
-            </Animated.View>
-          </View>
-
-          {/* Progress */}
-          <Text style={styles.progress}>{sentenceIndex + 1}/{sentences.length} sentences</Text>
-
-          {/* English sentence */}
-          <View style={styles.sentenceCard}>
-            <Text style={styles.sentenceLabel}>Translate to {effectiveLangLabel}:</Text>
-            <Text style={styles.sentenceEnglish}>{currentSentence.sentence_english}</Text>
-          </View>
-
-          {/* Input */}
-          <View style={styles.inputArea}>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.quizInput}
-                placeholder="Type or speak the sentence…"
-                placeholderTextColor="rgba(62,48,36,0.4)"
-                value={sentenceGuess}
-                onChangeText={(text) => {
-                  setSentenceGuess(text);
-                  setVoiceResult(null);
-                }}
-                onSubmitEditing={handleSentenceSubmit}
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!voiceProcessing}
-              />
-              <TouchableOpacity
-                style={[styles.micBtn, isRecording && styles.micBtnRecording]}
-                onPress={startRecording}
-                activeOpacity={0.7}
-                disabled={voiceProcessing}
-              >
-                <Text style={styles.micBtnText}>{isRecording ? '⏹' : '🎤'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={handleSentenceSubmit}
-                activeOpacity={0.7}
-                disabled={voiceProcessing}
-              >
-                <Text style={styles.submitBtnText}>→</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Recording indicator */}
-            {isRecording && (
-              <View style={styles.recordingIndicator}>
-                <View style={styles.recordingDot} />
-                <Text style={styles.recordingText}>Recording... tap mic to stop</Text>
+            {/* Octopus */}
+            <View style={styles.octopusSection}>
+              <View style={styles.speechBubble}>
+                <Text style={styles.speechText}>Type or speak the translation!</Text>
+                <View style={styles.speechTriangle} />
               </View>
-            )}
+              <Animated.View style={{ transform: [{ translateY: octopusBob }] }}>
+                <Image
+                  source={OCTOPUS.smiling}
+                  style={styles.octopusLarge}
+                  resizeMode="contain"
+                />
+              </Animated.View>
+            </View>
 
-            {/* Processing indicator */}
-            {voiceProcessing && (
-              <Text style={styles.processingText}>Processing speech...</Text>
-            )}
+            {/* Progress */}
+            <Text style={styles.progress}>{sentenceIndex + 1}/{sentences.length} sentences</Text>
 
-            {/* Voice result feedback */}
-            {voiceResult && !voiceProcessing && (
-              <View style={styles.voiceResultCard}>
-                <Text style={styles.voiceHeardLabel}>AI heard:</Text>
-                <Text style={styles.voiceHeardText}>{voiceResult.heard}</Text>
-                <View style={styles.voiceScoreRow}>
-                  <Text style={[
-                    styles.voiceScore,
-                    { color: voiceResult.score >= 7 ? '#2D8F4E' : voiceResult.score >= 4 ? '#D9772B' : '#C44D3F' },
-                  ]}>
-                    {voiceResult.score}/10
-                  </Text>
-                  <Text style={styles.voiceFeedback}>{voiceResult.feedback}</Text>
+            {/* English sentence */}
+            <View style={styles.sentenceCard}>
+              <Text style={styles.sentenceLabel}>Translate to {effectiveLangLabel}:</Text>
+              <Text style={styles.sentenceEnglish}>{currentSentence.sentence_english}</Text>
+            </View>
+
+            {/* Input */}
+            <View style={styles.inputArea}>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.quizInput}
+                  placeholder="Type or speak the sentence…"
+                  placeholderTextColor="rgba(62,48,36,0.4)"
+                  value={sentenceGuess}
+                  onChangeText={(text) => {
+                    setSentenceGuess(text);
+                    setVoiceResult(null);
+                  }}
+                  onSubmitEditing={handleSentenceSubmit}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!voiceProcessing}
+                />
+                <TouchableOpacity
+                  style={[styles.micBtn, isRecording && styles.micBtnRecording]}
+                  onPress={startRecording}
+                  activeOpacity={0.7}
+                  disabled={voiceProcessing}
+                >
+                  <Text style={styles.micBtnText}>{isRecording ? '⏹' : '🎤'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  onPress={handleSentenceSubmit}
+                  activeOpacity={0.7}
+                  disabled={voiceProcessing}
+                >
+                  <Text style={styles.submitBtnText}>→</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Recording indicator */}
+              {isRecording && (
+                <View style={styles.recordingIndicator}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.recordingText}>Recording... tap mic to stop</Text>
                 </View>
-              </View>
-            )}
-          </View>
+              )}
+
+              {/* Processing indicator */}
+              {voiceProcessing && (
+                <Text style={styles.processingText}>Processing speech...</Text>
+              )}
+
+              {/* Voice result feedback */}
+              {voiceResult && !voiceProcessing && (
+                <View style={styles.voiceResultCard}>
+                  <Text style={styles.voiceHeardLabel}>AI heard:</Text>
+                  <Text style={styles.voiceHeardText}>{voiceResult.heard}</Text>
+                  <View style={styles.voiceScoreRow}>
+                    <Text style={[
+                      styles.voiceScore,
+                      { color: voiceResult.score >= 7 ? '#2D8F4E' : voiceResult.score >= 4 ? '#D9772B' : '#C44D3F' },
+                    ]}>
+                      {voiceResult.score}/10
+                    </Text>
+                    <Text style={styles.voiceFeedback}>{voiceResult.feedback}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
