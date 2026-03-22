@@ -488,10 +488,14 @@ export default function CameraScreen() {
             <Text style={styles.topLang}>{effectiveLangLabel}</Text>
           </View>
 
-          <View style={styles.wordCounter}>
+          <TouchableOpacity
+            style={styles.wordCounter}
+            onPress={() => router.push('/my-words' as any)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.wordCountText}>{seenWords.length}</Text>
             <Text style={styles.wordCountLabel}>learned</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Center */}
