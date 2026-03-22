@@ -569,8 +569,9 @@ export default function CameraScreen() {
         >
           <TouchableOpacity
             style={styles.dismissButton}
-            onPress={handleDismiss}
+            onPress={() => { console.log('X pressed'); handleDismiss(); }}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text style={styles.dismissText}>✕</Text>
           </TouchableOpacity>
@@ -580,6 +581,7 @@ export default function CameraScreen() {
             showsVerticalScrollIndicator={false}
             bounces={false}
             keyboardShouldPersistTaps="handled"
+            style={styles.cardScroll}
           >
             {isDetecting ? (
               <View style={styles.stateWrap}>
@@ -929,20 +931,23 @@ const createStyles = () =>
       shadowRadius: 16,
       elevation: 12,
     },
+    cardScroll: {
+      marginTop: 36,
+    },
     cardScrollContent: {
       alignItems: 'center',
       gap: 10,
       paddingHorizontal: 24,
-      paddingTop: 16,
       paddingBottom: 8,
     },
     dismissButton: {
       position: 'absolute',
-      top: 16,
-      right: 20,
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      top: 12,
+      right: 12,
+      zIndex: 10,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: 'rgba(62,48,36,0.08)',
       alignItems: 'center',
       justifyContent: 'center',
