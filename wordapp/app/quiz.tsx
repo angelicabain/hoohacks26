@@ -53,6 +53,8 @@ const OCTOPUS = {
   happy: require('@/assets/images/happy.png'),
   upset: require('@/assets/images/frown.png'),
   thinking: require('@/assets/images/thinking.png'),
+  celebrate: require('@/assets/images/celebrate.gif'),
+  angry: require('@/assets/images/angry.png'),
 };
 
 export default function QuizScreen() {
@@ -406,12 +408,19 @@ export default function QuizScreen() {
     return isCorrect ? OCTOPUS.happy : OCTOPUS.upset;
   };
 
+
+
   const getFinalOctopus = () => {
     const avgSentence = grades.length > 0
       ? grades.reduce((a, b) => a + b.score, 0) / grades.length
       : 0;
     const recallPct = quizWords.length > 0 ? recallScore / quizWords.length : 0;
-    return (recallPct >= 0.6 && avgSentence >= 5) ? OCTOPUS.happy : OCTOPUS.smiling;
+    const overallPct = (recallPct + avgSentence / 10) / 2;
+
+    if (overallPct >= 0.8) return OCTOPUS.celebrate;
+    if (overallPct >= 0.6) return OCTOPUS.smiling;
+    if (overallPct >= 0.4) return OCTOPUS.upset;
+    return OCTOPUS.angry;
   };
 
   // No words passed — fallback
