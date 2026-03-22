@@ -804,7 +804,7 @@ const createStyles = () =>
     backLinkText: {
       color: 'rgba(62,48,36,0.64)',
       fontSize: 14,
-      fontFamily: Fonts.sans,
+      fontFamily: Fonts.serif,
     },
 
     safeArea: {
@@ -853,7 +853,7 @@ const createStyles = () =>
       color: 'rgba(255,255,255,0.8)',
       fontFamily: Fonts.rounded,
       letterSpacing: 0.3,
-      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowColor: 'rgba(32, 30, 30, 0.5)',
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 2,
     },
@@ -994,17 +994,13 @@ const createStyles = () =>
       flex: 1,
       minHeight: 44,
       borderRadius: 14,
-      backgroundColor: 'rgba(217,119,43,0.1)',
-      borderWidth: 1,
-      borderColor: 'rgba(217,119,43,0.2)',
       paddingHorizontal: 12,
       paddingVertical: 8,
     },
     targetWord: {
-      fontSize: 24,
+      fontSize: 18,
       color: '#D9772B',
       fontWeight: '600',
-      fontFamily: Fonts.serif,
     },
     revealButton: {
       flex: 1,
@@ -1017,12 +1013,14 @@ const createStyles = () =>
       borderColor: 'rgba(217,119,43,0.2)',
       alignItems: 'center',
       justifyContent: 'center',
+      fontWeight: '800',
     },
     revealText: {
       fontSize: 15,
       color: '#D9772B',
-      fontFamily: Fonts.serif,
       letterSpacing: 0.2,
+      fontWeight: '600',
+
     },
     speakerButton: {
       width: 44,
