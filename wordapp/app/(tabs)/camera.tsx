@@ -340,6 +340,16 @@ export default function CameraScreen() {
     setQuizDismissedAt(seenWords.length);
   }, [seenWords.length]);
 
+  const handleOpenWords = useCallback(() => {
+    router.push({
+      pathname: '/words' as any,
+      params: {
+        words: JSON.stringify(seenWords),
+        langLabel: effectiveLangLabel,
+      },
+    });
+  }, [seenWords, effectiveLangLabel, router]);
+
   // --- Permission states ---
   if (!permission) {
     return (
@@ -388,10 +398,14 @@ export default function CameraScreen() {
             <Text style={styles.topLang}>{effectiveLangLabel}</Text>
           </View>
 
-          <View style={styles.wordCounter}>
+          <TouchableOpacity
+            style={styles.wordCounter}
+            onPress={handleOpenWords}
+            activeOpacity={0.8}
+          >
             <Text style={styles.wordCountText}>{seenWords.length}</Text>
             <Text style={styles.wordCountLabel}>learned</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Center */}
