@@ -1046,6 +1046,9 @@ const createStyles = () =>
       borderRadius: 14,
       paddingHorizontal: 12,
       paddingVertical: 8,
+      backgroundColor: 'rgba(217,119,43,0.1)',
+      borderColor: 'rgba(217,119,43,0.2)',
+      borderWidth:1,
     },
     targetWord: {
       fontSize: 18,
