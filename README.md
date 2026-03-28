@@ -1,15 +1,15 @@
 # Fluency
 
-A camera-first language learning app built at **HooHacks 2026**. Point your phone at real-world objects — Fluency detects what you see, translates it into your target language, and reinforces the vocabulary through quizzes and pronunciation grading.
+A camera-first language learning app built at **HooHacks 2026**. Instead of studying language in isolation, you live it. Point your phone at any object around you, and Fluency identifies it, translates it into your target language, lets you hear the pronunciation, and quizzes you, all in real time. It's the language teacher that follows you everywhere, turning your entire environment into an immersive classroom.
 
 ## How It Works
 
 1. **Scan**: The camera auto-captures and identifies objects using Google Cloud Vision
 2. **Learn**: See the translation, hear it spoken aloud, and practice saying it yourself
 3. **Quiz**: After collecting words, run through a multi-phase quiz:
-   - *Recall* — Type translations from memory (fuzzy-matched)
-   - *Sentences* — Write and speak AI-generated practice sentences
-   - *Grading* — Get scored 1–10 with feedback on both written and spoken attempts
+   - *Recall*:  Type translations from memory (fuzzy-matched)
+   - *Sentences*: Write and speak AI-generated practice sentences
+   - *Grading*: Get scored 1–10 with feedback on both written and spoken attempts
 
 Supports **Spanish, French, Portuguese, Mandarin, Japanese, and Korean**.
 
@@ -20,24 +20,27 @@ Supports **Spanish, French, Portuguese, Mandarin, Japanese, and Korean**.
 ### Screenshots
 
 <p align="center">
-  <img src="wordapp/assets/screenshots/home-screen.jpeg" alt="Home Screen" width="200"/>
+  <img src="wordapp/assets/screenshots/home.PNG" alt="Home Screen" width="200"/>
   <img src="wordapp/assets/screenshots/object-detected.png" alt="Object Detection" width="200"/>
   <img src="wordapp/assets/screenshots/pronounciation-feedback.png" alt="Pronunciation Feedback" width="200"/>
+  <img src="wordapp/assets/screenshots/word-quiz.PNG" alt="Word Quiz" width="200"/>
+  <img src="wordapp/assets/screenshots/sentence-quiz.PNG" alt="Sentence Quiz" width="200"/>
   <img src="wordapp/assets/screenshots/quiz-screen.png" alt="Quiz Results" width="200"/>
   <img src="wordapp/assets/screenshots/my-words.png" alt="Word Collection" width="200"/>
+  <img src="wordapp/assets/screenshots/how-to.PNG" alt="How To" width="200"/>
 </p>
 
 ## Tech Stack
 
-**Frontend** — React 19, React Native, Expo SDK 54, TypeScript, Expo Router
+**Frontend**: React 19, React Native, Expo SDK 54, TypeScript, Expo Router
 
-**Backend** — FastAPI (Python, async)
+**Backend**: FastAPI (Python, async)
 
 **AI / ML Services**
-- Google Cloud Vision — object detection
-- Google Cloud Translation — real-time translation
-- Groq Llama 3.3 70B — sentence generation, grading, pronunciation feedback
-- Groq Whisper (large-v3-turbo) — speech-to-text transcription
+- Google Cloud Vision: object detection
+- Google Cloud Translation: real-time translation
+- Groq Llama 3.3 70B: sentence generation, grading, pronunciation feedback
+- Groq Whisper (large-v3-turbo): speech-to-text transcription
 
 ## Architecture
 
